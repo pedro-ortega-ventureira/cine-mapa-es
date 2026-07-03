@@ -361,6 +361,7 @@ export type Database = {
         Returns: boolean
       }
       increment_profile_views: { Args: { _slug: string }; Returns: undefined }
+      seed_municipalities_batch: { Args: { _payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "editor" | "user"
