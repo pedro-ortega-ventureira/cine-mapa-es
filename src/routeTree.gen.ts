@@ -9,38 +9,211 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DirectorioRouteImport } from './routes/directorio'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProfesionalesSlugRouteImport } from './routes/profesionales.$slug'
+import { Route as MunicipiosCodigoRouteImport } from './routes/municipios.$codigo'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as ApiTmdbSplatRouteImport } from './routes/api/tmdb.$'
+import { Route as ApiPublicSeedMunicipalitiesRouteImport } from './routes/api/public/seed-municipalities'
+import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_authenticated/admin.profesionales'
+import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
+import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
 
+const DirectorioRoute = DirectorioRouteImport.update({
+  id: '/directorio',
+  path: '/directorio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalesSlugRoute = ProfesionalesSlugRouteImport.update({
+  id: '/profesionales/$slug',
+  path: '/profesionales/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MunicipiosCodigoRoute = MunicipiosCodigoRouteImport.update({
+  id: '/municipios/$codigo',
+  path: '/municipios/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const ApiTmdbSplatRoute = ApiTmdbSplatRouteImport.update({
+  id: '/api/tmdb/$',
+  path: '/api/tmdb/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeedMunicipalitiesRoute =
+  ApiPublicSeedMunicipalitiesRouteImport.update({
+    id: '/api/public/seed-municipalities',
+    path: '/api/public/seed-municipalities',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAdminProfesionalesRoute =
+  AuthenticatedAdminProfesionalesRouteImport.update({
+    id: '/profesionales',
+    path: '/profesionales',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMunicipiosRoute =
+  AuthenticatedAdminMunicipiosRouteImport.update({
+    id: '/municipios',
+    path: '/municipios',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminImportarRoute =
+  AuthenticatedAdminImportarRouteImport.update({
+    id: '/importar',
+    path: '/importar',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/directorio': typeof DirectorioRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/municipios/$codigo': typeof MunicipiosCodigoRoute
+  '/profesionales/$slug': typeof ProfesionalesSlugRoute
+  '/admin/importar': typeof AuthenticatedAdminImportarRoute
+  '/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
+  '/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
+  '/api/tmdb/$': typeof ApiTmdbSplatRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/directorio': typeof DirectorioRoute
+  '/municipios/$codigo': typeof MunicipiosCodigoRoute
+  '/profesionales/$slug': typeof ProfesionalesSlugRoute
+  '/admin/importar': typeof AuthenticatedAdminImportarRoute
+  '/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
+  '/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
+  '/api/tmdb/$': typeof ApiTmdbSplatRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/directorio': typeof DirectorioRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/municipios/$codigo': typeof MunicipiosCodigoRoute
+  '/profesionales/$slug': typeof ProfesionalesSlugRoute
+  '/_authenticated/admin/importar': typeof AuthenticatedAdminImportarRoute
+  '/_authenticated/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
+  '/_authenticated/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
+  '/api/tmdb/$': typeof ApiTmdbSplatRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/directorio'
+    | '/admin'
+    | '/municipios/$codigo'
+    | '/profesionales/$slug'
+    | '/admin/importar'
+    | '/admin/municipios'
+    | '/admin/profesionales'
+    | '/api/public/seed-municipalities'
+    | '/api/tmdb/$'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/directorio'
+    | '/municipios/$codigo'
+    | '/profesionales/$slug'
+    | '/admin/importar'
+    | '/admin/municipios'
+    | '/admin/profesionales'
+    | '/api/public/seed-municipalities'
+    | '/api/tmdb/$'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/directorio'
+    | '/_authenticated/admin'
+    | '/municipios/$codigo'
+    | '/profesionales/$slug'
+    | '/_authenticated/admin/importar'
+    | '/_authenticated/admin/municipios'
+    | '/_authenticated/admin/profesionales'
+    | '/api/public/seed-municipalities'
+    | '/api/tmdb/$'
+    | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  DirectorioRoute: typeof DirectorioRoute
+  MunicipiosCodigoRoute: typeof MunicipiosCodigoRoute
+  ProfesionalesSlugRoute: typeof ProfesionalesSlugRoute
+  ApiPublicSeedMunicipalitiesRoute: typeof ApiPublicSeedMunicipalitiesRoute
+  ApiTmdbSplatRoute: typeof ApiTmdbSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/directorio': {
+      id: '/directorio'
+      path: '/directorio'
+      fullPath: '/directorio'
+      preLoaderRoute: typeof DirectorioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +221,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesionales/$slug': {
+      id: '/profesionales/$slug'
+      path: '/profesionales/$slug'
+      fullPath: '/profesionales/$slug'
+      preLoaderRoute: typeof ProfesionalesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/municipios/$codigo': {
+      id: '/municipios/$codigo'
+      path: '/municipios/$codigo'
+      fullPath: '/municipios/$codigo'
+      preLoaderRoute: typeof MunicipiosCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/tmdb/$': {
+      id: '/api/tmdb/$'
+      path: '/api/tmdb/$'
+      fullPath: '/api/tmdb/$'
+      preLoaderRoute: typeof ApiTmdbSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seed-municipalities': {
+      id: '/api/public/seed-municipalities'
+      path: '/api/public/seed-municipalities'
+      fullPath: '/api/public/seed-municipalities'
+      preLoaderRoute: typeof ApiPublicSeedMunicipalitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/profesionales': {
+      id: '/_authenticated/admin/profesionales'
+      path: '/profesionales'
+      fullPath: '/admin/profesionales'
+      preLoaderRoute: typeof AuthenticatedAdminProfesionalesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/municipios': {
+      id: '/_authenticated/admin/municipios'
+      path: '/municipios'
+      fullPath: '/admin/municipios'
+      preLoaderRoute: typeof AuthenticatedAdminMunicipiosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/importar': {
+      id: '/_authenticated/admin/importar'
+      path: '/importar'
+      fullPath: '/admin/importar'
+      preLoaderRoute: typeof AuthenticatedAdminImportarRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminImportarRoute: typeof AuthenticatedAdminImportarRoute
+  AuthenticatedAdminMunicipiosRoute: typeof AuthenticatedAdminMunicipiosRoute
+  AuthenticatedAdminProfesionalesRoute: typeof AuthenticatedAdminProfesionalesRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminImportarRoute: AuthenticatedAdminImportarRoute,
+  AuthenticatedAdminMunicipiosRoute: AuthenticatedAdminMunicipiosRoute,
+  AuthenticatedAdminProfesionalesRoute: AuthenticatedAdminProfesionalesRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  DirectorioRoute: DirectorioRoute,
+  MunicipiosCodigoRoute: MunicipiosCodigoRoute,
+  ProfesionalesSlugRoute: ProfesionalesSlugRoute,
+  ApiPublicSeedMunicipalitiesRoute: ApiPublicSeedMunicipalitiesRoute,
+  ApiTmdbSplatRoute: ApiTmdbSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
