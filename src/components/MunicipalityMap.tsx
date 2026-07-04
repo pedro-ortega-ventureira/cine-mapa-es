@@ -31,31 +31,95 @@ function project(lat: number, lng: number, bbox: typeof SPAIN_BBOX, w: number, h
   return { x, y };
 }
 
+function bufferRadius(count: number) {
+  // 1 pro → 7px, scales up to ~20px
+  return Math.min(22, 7 + Math.sqrt(count) * 4);
+}
+function dotRadius(count: number) {
+  return Math.min(7, 2.5 + Math.sqrt(count));
+}
+
 export function MunicipalityMap({ points, onlyWithProfessionals, onSelectMunicipality }: Props) {
   const [hover, setHover] = useState<MapPoint | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const filtered = useMemo(
-    () =>
-      points.filter(
-        (p) =>
-          p.lat != null &&
-          p.lng != null &&
-          p.population < 20000 &&
-          (!onlyWithProfessionals || (p.professionals_count ?? 0) > 0),
-      ),
-    [points, onlyWithProfessionals],
+  const geoPoints = useMemo(
+    () => points.filter((p) => p.lat != null && p.lng != null && p.population < 20000),
+    [points],
   );
 
-  const { mainland, canarias } = useMemo(() => {
-    const mainland: MapPoint[] = [];
-    const canarias: MapPoint[] = [];
-    for (const p of filtered) {
-      if (isCanarias(p.lat!, p.lng!)) canarias.push(p);
-      else mainland.push(p);
+  const { baseMainland, baseCanarias, activeMainland, activeCanarias } = useMemo(() => {
+    const baseMainland: MapPoint[] = [];
+    const baseCanarias: MapPoint[] = [];
+    const activeMainland: MapPoint[] = [];
+    const activeCanarias: MapPoint[] = [];
+    for (const p of geoPoints) {
+      const active = (p.professionals_count ?? 0) > 0;
+      if (isCanarias(p.lat!, p.lng!)) {
+        if (active) activeCanarias.push(p);
+        else if (!onlyWithProfessionals) baseCanarias.push(p);
+      } else {
+        if (active) activeMainland.push(p);
+        else if (!onlyWithProfessionals) baseMainland.push(p);
+      }
     }
-    return { mainland, canarias };
-  }, [filtered]);
+    return { baseMainland, baseCanarias, activeMainland, activeCanarias };
+  }, [geoPoints, onlyWithProfessionals]);
+
+  const renderPoint = (
+    p: MapPoint,
+    bbox: typeof SPAIN_BBOX,
+    w: number,
+    h: number,
+    variant: "base" | "active",
+  ) => {
+    const { x, y } = project(p.lat!, p.lng!, bbox, w, h);
+    const b = bucketFor(p.population);
+    const count = p.professionals_count ?? 0;
+    const handlers = {
+      onMouseEnter: (e: React.MouseEvent<SVGElement>) => {
+        setHover(p);
+        const rect = (e.currentTarget as SVGGraphicsElement).getBoundingClientRect();
+        const parent = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+        setHoverPos({ x: rect.left - parent.left + 8, y: rect.top - parent.top - 8 });
+      },
+      onMouseLeave: () => setHover(null),
+      onClick: () => onSelectMunicipality?.(p.code),
+      style: { cursor: onSelectMunicipality ? "pointer" : "default" as const },
+    };
+
+    if (variant === "base") {
+      return (
+        <circle
+          key={p.code}
+          cx={x}
+          cy={y}
+          r={1.3}
+          fill={b.color}
+          fillOpacity={0.45}
+          {...handlers}
+        />
+      );
+    }
+    // active: buffer halo + solid dot
+    const rBuf = bufferRadius(count);
+    const rDot = dotRadius(count);
+    return (
+      <g key={p.code} {...handlers}>
+        <circle cx={x} cy={y} r={rBuf} fill={b.color} fillOpacity={0.18} />
+        <circle cx={x} cy={y} r={rBuf * 0.55} fill={b.color} fillOpacity={0.28} />
+        <circle
+          cx={x}
+          cy={y}
+          r={rDot}
+          fill={b.color}
+          stroke="white"
+          strokeWidth={1}
+          fillOpacity={1}
+        />
+      </g>
+    );
+  };
 
   return (
     <div className="relative w-full">
@@ -65,35 +129,12 @@ export function MunicipalityMap({ points, onlyWithProfessionals, onSelectMunicip
         role="img"
         aria-label="Mapa de municipios de España"
       >
-        {/* Mainland + Baleares background */}
         <rect x={0} y={0} width={W} height={H} fill="transparent" />
-        {mainland.map((p) => {
-          const { x, y } = project(p.lat!, p.lng!, SPAIN_BBOX, W, H);
-          const b = bucketFor(p.population);
-          const hasPros = (p.professionals_count ?? 0) > 0;
-          const r = hasPros ? 3 + Math.min(6, (p.professionals_count ?? 0)) : 1.4;
-          return (
-            <circle
-              key={p.code}
-              cx={x}
-              cy={y}
-              r={r}
-              fill={b.color}
-              fillOpacity={hasPros ? 0.95 : 0.55}
-              stroke={hasPros ? "white" : "none"}
-              strokeWidth={hasPros ? 0.8 : 0}
-              onMouseEnter={(e) => {
-                setHover(p);
-                const rect = (e.target as SVGCircleElement).getBoundingClientRect();
-                const parent = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
-                setHoverPos({ x: rect.left - parent.left + 8, y: rect.top - parent.top - 8 });
-              }}
-              onMouseLeave={() => setHover(null)}
-              onClick={() => onSelectMunicipality?.(p.code)}
-              style={{ cursor: onSelectMunicipality ? "pointer" : "default" }}
-            />
-          );
-        })}
+        {/* Base layer (dim dots) */}
+        <g>{baseMainland.map((p) => renderPoint(p, SPAIN_BBOX, W, H, "base"))}</g>
+        {/* Active layer (halo + dot) on top */}
+        <g>{activeMainland.map((p) => renderPoint(p, SPAIN_BBOX, W, H, "active"))}</g>
+
         {/* Canarias inset */}
         <g transform={`translate(20, ${H - CANARIAS_H - 20})`}>
           <rect
@@ -109,30 +150,11 @@ export function MunicipalityMap({ points, onlyWithProfessionals, onSelectMunicip
           <text x={4} y={-8} fontSize={10} fill="oklch(0.4 0.02 240)">
             Canarias
           </text>
-          {canarias.map((p) => {
-            const { x, y } = project(p.lat!, p.lng!, CANARIAS_BBOX, CANARIAS_W, CANARIAS_H);
-            const b = bucketFor(p.population);
-            const hasPros = (p.professionals_count ?? 0) > 0;
-            const r = hasPros ? 2.5 + Math.min(4, (p.professionals_count ?? 0)) : 1;
-            return (
-              <circle
-                key={p.code}
-                cx={x}
-                cy={y}
-                r={r}
-                fill={b.color}
-                fillOpacity={hasPros ? 0.95 : 0.55}
-                stroke={hasPros ? "white" : "none"}
-                strokeWidth={hasPros ? 0.6 : 0}
-                onMouseEnter={() => setHover(p)}
-                onMouseLeave={() => setHover(null)}
-                onClick={() => onSelectMunicipality?.(p.code)}
-                style={{ cursor: onSelectMunicipality ? "pointer" : "default" }}
-              />
-            );
-          })}
+          {baseCanarias.map((p) => renderPoint(p, CANARIAS_BBOX, CANARIAS_W, CANARIAS_H, "base"))}
+          {activeCanarias.map((p) => renderPoint(p, CANARIAS_BBOX, CANARIAS_W, CANARIAS_H, "active"))}
         </g>
       </svg>
+
 
       {/* Tooltip */}
       {hover && (
