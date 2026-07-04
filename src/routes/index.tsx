@@ -12,20 +12,21 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [q, setQ] = useState("");
-  const [onlyWithPros, setOnlyWithPros] = useState(true);
+  const [onlyWithPros, setOnlyWithPros] = useState(false);
 
   const municipalitiesQ = useQuery({
     queryKey: ["municipality_stats"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("municipality_stats" as any)
-        .select("code,name,province,autonomous_community,population,lat,lng,professionals_count")
+        .select("code,name,province,autonomous_community,population,lat,lng,professionals_count,verified_count")
         .lt("population", 20000)
         .limit(10000);
       if (error) throw error;
       return (data ?? []) as unknown as MapPoint[];
     },
   });
+
 
   const statsQ = useQuery({
     queryKey: ["home-stats"],
