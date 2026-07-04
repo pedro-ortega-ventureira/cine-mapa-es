@@ -222,3 +222,60 @@ export const deleteFilmography = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Resolve municipality_code from raw_postal_code for professionals that don't have one yet.
+// Ambiguous CPs (multiple municipalities) get tagged "revisar-cp" instead of auto-assigned.
+export const backfillMunicipalities = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data: pending, error } = await context.supabase
+      .from("professionals")
+      .select("id, raw_postal_code, tags")
+      .is("municipality_code", null)
+      .not("raw_postal_code", "is", null)
+      .limit(2000);
+    if (error) throw new Error(error.message);
+
+    let resolved = 0, ambiguous = 0, missing = 0;
+    for (const p of pending ?? []) {
+      const cp = String((p as any).raw_postal_code || "").padStart(5, "0");
+      if (!/^\d{5}$/.test(cp)) { missing++; continue; }
+      const { data: matches } = await context.supabase
+        .from("municipalities")
+        .select("code")
+        .contains("postal_codes", [cp])
+        .limit(2);
+      if (!matches || matches.length === 0) {
+        missing++;
+        continue;
+      }
+      if (matches.length > 1) {
+        const tags = Array.from(new Set([...(((p as any).tags as string[]) ?? []), "revisar-cp"]));
+        await context.supabase.from("professionals").update({ tags }).eq("id", (p as any).id);
+        ambiguous++;
+        continue;
+      }
+      await context.supabase
+        .from("professionals")
+        .update({ municipality_code: matches[0].code })
+        .eq("id", (p as any).id);
+      resolved++;
+    }
+    return { checked: pending?.length ?? 0, resolved, ambiguous, missing };
+  });
+
+// Verify all currently-unverified professionals (typically the freshly-imported batch).
+export const bulkVerifyAll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data, error } = await context.supabase
+      .from("professionals")
+      .update({ verified: true })
+      .eq("verified", false)
+      .select("id");
+    if (error) throw new Error(error.message);
+    return { verified: data?.length ?? 0 };
+  });
+

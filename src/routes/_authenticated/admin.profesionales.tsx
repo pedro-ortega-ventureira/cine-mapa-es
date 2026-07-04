@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { setVerified, deleteProfessional, upsertProfessional } from "@/lib/professionals.functions";
+import {
+  setVerified,
+  deleteProfessional,
+  upsertProfessional,
+  backfillMunicipalities,
+  bulkVerifyAll,
+} from "@/lib/professionals.functions";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, MapPin, ShieldCheck } from "lucide-react";
 import { PRIMARY_ROLES, PRODUCTION_TYPES, slugify } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/admin/profesionales")({
   component: AdminPros,
 });
+
 
 function AdminPros() {
   const qc = useQueryClient();
@@ -25,6 +32,10 @@ function AdminPros() {
 
   const setVerifiedFn = useServerFn(setVerified);
   const deleteFn = useServerFn(deleteProfessional);
+  const backfillFn = useServerFn(backfillMunicipalities);
+  const verifyAllFn = useServerFn(bulkVerifyAll);
+  const [busy, setBusy] = useState<string | null>(null);
+
 
   const profsQ = useQuery({
     queryKey: ["admin-professionals", search],
@@ -69,26 +80,75 @@ function AdminPros() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-2xl font-semibold">Profesionales</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" /> Nuevo
-            </Button>
-          </DialogTrigger>
-          {editing && (
-            <EditDialog
-              value={editing}
-              onDone={() => {
-                setDialogOpen(false);
-                setEditing(null);
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy !== null}
+            onClick={async () => {
+              setBusy("backfill");
+              try {
+                const r = await backfillFn({});
+                toast.success(
+                  `CPs: ${r.resolved} resueltos · ${r.ambiguous} ambiguos · ${r.missing} sin match`,
+                );
                 qc.invalidateQueries({ queryKey: ["admin-professionals"] });
-              }}
-            />
-          )}
-        </Dialog>
+                qc.invalidateQueries({ queryKey: ["municipality_stats"] });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Error");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            {busy === "backfill" ? "Resolviendo…" : "Resolver CPs"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy !== null}
+            onClick={async () => {
+              if (!confirm("¿Verificar TODOS los profesionales no verificados?")) return;
+              setBusy("verify");
+              try {
+                const r = await verifyAllFn({});
+                toast.success(`${r.verified} fichas verificadas`);
+                qc.invalidateQueries({ queryKey: ["admin-professionals"] });
+                qc.invalidateQueries({ queryKey: ["municipality_stats"] });
+                qc.invalidateQueries({ queryKey: ["home-stats"] });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Error");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            {busy === "verify" ? "Verificando…" : "Verificar todo"}
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4 mr-2" /> Nuevo
+              </Button>
+            </DialogTrigger>
+            {editing && (
+              <EditDialog
+                value={editing}
+                onDone={() => {
+                  setDialogOpen(false);
+                  setEditing(null);
+                  qc.invalidateQueries({ queryKey: ["admin-professionals"] });
+                }}
+              />
+            )}
+          </Dialog>
+        </div>
       </div>
+
 
       <Input
         placeholder="Buscar por nombre…"

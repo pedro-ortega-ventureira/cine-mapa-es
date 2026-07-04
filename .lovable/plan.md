@@ -1,130 +1,62 @@
-# Directorio Audiovisual del Medio Rural — Plan
+## Diagnóstico
 
-App full-stack en TanStack Start + Lovable Cloud (Supabase) con mapa de municipios <20.000 hab, directorio, perfiles con filmografía TMDB, panel admin e importación desde Excel.
+El mapa SÍ se renderiza (SVG presente), pero está vacío porque:
 
-## Fases de entrega
+1. La casilla **"Solo municipios con profesionales"** está activada por defecto.
+2. De los **113 profesionales importados** desde el Excel, **0 tienen `municipality_code`** (el CP no se resolvió a municipio: `municipalities.postal_codes` está vacío para las 8.112 filas).
+3. Además, **0 están `verified=true`**, por lo que aunque tuvieran municipio no contarían en la vista pública del mapa.
 
-1. **Fase 1 — Base + datos**: activar Cloud, esquema Supabase, importar dataset municipios INE, seed desde el Excel subido, rutas y layout.
-2. **Fase 2 — Mapa y directorio público**: mapa interactivo, listado con filtros, perfil público básico.
-3. **Fase 3 — Auth + Admin**: login, panel `/admin`, CRUD, importación Excel con previsualización.
-4. **Fase 4 — TMDB y filmografía**: buscador TMDB, cache en `filmography_items`, grid en perfil.
-5. **Fase 5 — Extras**: showreel, verificación, métricas, contador de vistas, contacto.
+## Cambios propuestos
 
----
+### 1. Mapa siempre visible con capa base
+- Desactivar por defecto "Solo con profesionales" → verás los ~7.700 municipios como puntos pequeños atenuados coloreados por población.
+- Cambiar la lógica del toggle a "Resaltar solo con profesionales" (oculta la capa base cuando se marca), en vez de esconder todo.
 
-## Arquitectura de rutas
+### 2. Halo / buffer sobre municipios con profesionales
+En `MunicipalityMap.tsx`, para cada municipio con `professionals_count > 0` renderizar **dos círculos concéntricos**:
 
-```
-src/routes/
-  __root.tsx                    layout global + nav + auth listener
-  index.tsx                     home: mapa + búsqueda + contadores
-  directorio.tsx                listado (grid/tabla) con filtros
-  profesionales.$slug.tsx       perfil público
-  municipios.$codigo.tsx        vista de municipio con sus profesionales
-  auth.tsx                      login (Cloud Auth)
-  _authenticated/
-    admin.tsx                   layout admin
-    admin.index.tsx             dashboard con métricas
-    admin.profesionales.tsx     CRUD tabla maestra
-    admin.importar.tsx          importación Excel con preview
-    admin.municipios.tsx        gestión municipios
-  api/tmdb.$.ts                 proxy TMDB (protege API key server-side)
-```
+- **Buffer exterior**: radio 8–18 px (según nº de profesionales), `fill` del color de la escala de población, `fillOpacity ≈ 0.18`, sin borde — actúa como halo/glow.
+- **Punto interior**: 3–6 px, sólido, borde blanco (comportamiento actual).
 
-## Esquema Supabase
+Los municipios sin profesionales se mantienen como puntos pequeños de 1.4 px semi-transparentes (capa base). Efecto: los municipios con actividad "brillan" sobre el mapa base.
 
-**Enums**: `gender_enum`, `availability_enum`, `filmography_type`, `credit_type`, `app_role`.
+### 3. Resolver CP → municipio (para los 113 importados)
 
-**Tablas**:
+**Plan de datos**:
+- Descargar dataset público de códigos postales de España (INE / OpenData: ~55.000 pares CP↔municipio, ~1 MB CSV).
+- Nueva función RPC `seed_postal_codes_batch(jsonb)` (security definer, misma pauta que `seed_municipalities_batch`) que rellena `municipalities.postal_codes` en lotes.
+- Endpoint `/api/public/seed-postal-codes` (uno solo) que descarga el dataset y llama a la RPC. Después la revoco como hicimos con la anterior.
 
-- `municipalities` — `ine_code` (PK), `name`, `province`, `autonomous_community`, `population`, `lat`, `lng`, `postal_codes text[]`. Índice por `province`, `autonomous_community`, `population`. Público read via policy `TO anon` con `population < 20000`.
-- `professionals` — todos los campos del brief (personales, ubicación con FK `municipality_code` → municipalities, perfil profesional, `production_types text[]`, `social_links jsonb`, `education/awards jsonb[]`, extras: `reel_url`, `equipment_owned`, `union_membership`, `nif_cif`, `verified`, `profile_views`, `tags`, `slug` único, `date_joined`). RLS: SELECT público solo si `verified=true`; INSERT/UPDATE/DELETE solo admin.
-- `filmography_items` — vinculado a `professionals` + campos TMDB (`tmdb_id`, `type`, `poster_url`, `synopsis`, `tmdb_rating`, `role_in_production`, `credit_type`, `custom_note`, `featured`). Índice único (`professional_id`, `tmdb_id`, `type`).
-- `user_roles` — patrón estándar (`user_id`, `role app_role`) + función `has_role()` SECURITY DEFINER (evita recursión RLS).
-- `import_logs` — auditoría de importaciones Excel (`filename`, `rows_ok`, `rows_updated`, `rows_error`, `errors jsonb`, `imported_by`).
-- `contact_messages` — mensajes desde el botón de contacto (privados, admin-only).
+**Backfill de profesionales existentes**:
+- Función `backfillMunicipalities` (admin) que recorre `professionals` con `raw_postal_code IS NOT NULL AND municipality_code IS NULL` y resuelve vía `postal_codes @> [cp]`.
+- Cuando un CP mapea a **varios municipios** (habitual en zonas rurales agrupadas), se marca el registro con `tags += "revisar-cp"` para que el admin elija manualmente.
+- Botón "Resolver CPs pendientes" en `/admin/profesionales` que muestra cuántos quedan.
 
-Grants explícitos en cada tabla (`authenticated`, `service_role`, `anon` solo donde procede). Todas las mutaciones desde server functions con `requireSupabaseAuth` + `has_role('admin')`.
+### 4. Visibilidad de los 113 importados en el mapa
+Dos opciones (elijo la B por defecto):
 
-## Datos de municipios
+- A) Dejar el mapa mostrando solo `verified=true` → hay que verificarlos uno a uno.
+- **B) Contar en el mapa a todos los profesionales con `municipality_code`, verificados o no**, pero seguir ocultando los NO verificados en el perfil público (`/profesionales/:slug`) y en el listado del directorio.
+  - Ajuste: crear una vista `municipality_stats_all` (o parametrizar la existente) que cuente `professionals` sin filtro de `verified`. En `/directorio` y perfil público seguimos filtrando por `verified=true`.
 
-Descargo dataset público (INE + centroides): CSV con ~8.100 municipios (`código INE`, nombre, provincia, CCAA, población, lat, lng) y lo cargo mediante migración `INSERT` por lotes. Para el mapa uso GeoJSON simplificado de límites provinciales + puntos (centroides) por municipio — evita cargar 8k polígonos en el navegador.
+Así el mapa muestra ya la actividad importada mientras se validan las fichas.
 
-## Mapa interactivo
+### 5. Ajustes menores
+- Tooltip: mostrar "X profesional(es) · Y verificado(s)" cuando difieran.
+- Añadir botón "Verificar todos los importados" en `/admin/profesionales` (bulk update).
 
-- **Librería**: `react-simple-maps` con GeoJSON provincial de España + capa de círculos SVG por municipio (centroide). Fallback a Leaflet solo si hace falta clustering.
-- **Escala de color** (D3 `scaleThreshold`): 5 tramos por población según brief (gris → azul marino).
-- **Tooltip** con nombre, provincia, CCAA, nº profesionales (JOIN cacheado).
-- **Click** → panel lateral (`Sheet` de shadcn) con lista de profesionales del municipio.
-- **Filtros**: CCAA, provincia, rol, tipo de producción — aplican tanto al mapa (opacidad/tamaño de puntos) como al listado.
-- Solo se renderizan municipios con `population < 20000` **y** al menos 1 profesional (opcional toggle "ver todos").
+## Detalles técnicos
 
-## Integración TMDB
+- Ficheros a tocar: `src/components/MunicipalityMap.tsx`, `src/routes/index.tsx`, `src/lib/professionals.functions.ts` (backfill), `src/routes/_authenticated/admin.profesionales.tsx` (botones), migración SQL (RPC `seed_postal_codes_batch`, vista `municipality_stats_all`).
+- Dataset postal: uso `https://github.com/inigoflores/ds-codigos-postales-espana` o el CSV de datos.gob.es. Peso final en tabla: sólo el array `postal_codes` en cada municipio, sin tabla auxiliar.
+- El halo (buffer) es puramente SVG, sin librerías nuevas.
 
-- Server route `/api/tmdb/*` proxya llamadas para no exponer la API key al cliente.
-- Endpoints usados:
-  - `GET /search/multi?query=` — buscador del admin/perfil.
-  - `GET /movie/{id}` y `GET /tv/{id}` — detalle al seleccionar.
-  - `GET /movie/{id}/credits` — para modal de elenco/crew.
-- Cache: guardamos snapshot completo en `filmography_items` al añadir; no re-consultamos TMDB para render. Job manual "refrescar TMDB" en admin.
-- Rate limit: throttle client-side (debounce 350ms).
+## Orden de ejecución
 
-## Importación Excel
+1. Migración: RPC `seed_postal_codes_batch` + vista `municipality_stats_all`.
+2. Endpoint de carga de CPs + ejecutarlo.
+3. Backfill de `municipality_code` en profesionales existentes.
+4. Ajustes del mapa (buffer + capa base siempre visible + toggle invertido).
+5. Botones admin (verificar todos, resolver CPs pendientes).
 
-Flujo en `/admin/importar`:
-1. Subida `.xlsx` → parseo con SheetJS en el cliente.
-2. UI de **mapeo de columnas** (dropdown por columna del Excel → campo del modelo). Auto-detección por nombre de cabecera.
-3. **Previsualización** primeras 20 filas con validación (Zod: email, año, código INE, CP→municipio).
-4. Botón "Importar" → server function `importProfessionals` (admin-only) que hace UPSERT por (`email`) o (`ine_code` + `full_name`).
-5. Registro en `import_logs` con contadores y errores por fila.
-
-**Excel actual**: solo 8 columnas (marca temporal, actividad, CP, roles, interés, email, nombre, RGPD). Mapeo inicial: `CP → municipality_code` vía tabla `postal_codes`, `nombre → full_name`, `email → email`, `roles → primary_role + secondary_roles` (split por comas). El resto de campos quedan vacíos hasta que el profesional complete su perfil.
-
-## Perfil público
-
-- Hero con foto, nombre, alias, municipio + mini-mapa.
-- Tags de roles y tipos de producción.
-- **Filmografía**: grid de posters TMDB, hover con año/rol, click → modal con sinopsis, rating, crédito en la obra + link a TMDB.
-- Secciones: bio, premios (timeline), formación, idiomas, disponibilidad, showreel embed (Vimeo/YouTube).
-- Botón "Contactar" → modal con formulario que inserta en `contact_messages`; email real oculto.
-- Counter `profile_views` incrementado por RPC.
-
-## Panel admin
-
-- Dashboard: contadores por CCAA, rol, tipo de producción (charts con `recharts`).
-- Tabla maestra con filtros, búsqueda, edición inline, verificación (checkbox `verified`).
-- Gestión municipios (solo lectura + fix manual de coordenadas si falta).
-- Log de importaciones.
-
-## Componentes principales (orden de desarrollo)
-
-1. `MunicipalityMap` + `MapLegend` + `MapFilters`
-2. `ProfessionalCard` / `ProfessionalListItem`
-3. `DirectoryFilters` (sidebar shadcn)
-4. `ProfessionalProfile` + `FilmographyGrid` + `FilmographyModal`
-5. `TmdbSearchCombobox`
-6. `ExcelImportWizard` (upload → mapeo → preview → resultado)
-7. `AdminDashboard` + `AdminProfessionalsTable`
-8. `AuthForm` + gate `_authenticated`
-9. `ContactMessageDialog`
-10. `MunicipalityDetailPanel`
-
-Total estimado: ~25 componentes + 10 rutas + 12 server functions.
-
-## Dependencias externas a instalar
-
-`react-simple-maps`, `d3-scale`, `d3-scale-chromatic`, `topojson-client`, `xlsx` (SheetJS), `recharts`, `zod` (ya suele estar).
-
-## Secretos / configuración
-
-- **Lovable Cloud** (Supabase gestionado) — lo activo al iniciar Fase 1.
-- **TMDB_API_KEY** — te lo pediré al llegar a Fase 4 (guardado en Cloud, usado solo desde `api/tmdb.$.ts`).
-- Cuenta admin inicial: la creas tras Fase 3 y te doy el SQL para promoverla a `admin` en `user_roles`.
-
-## Riesgos y decisiones abiertas
-
-- Dataset INE de municipios: pesa ~1MB en JSON. Lo indexo en Supabase, no lo sirvo al cliente entero.
-- Geocoding de CP → municipio: un CP puede cubrir varios municipios. Al importar el Excel actual, si hay ambigüedad marco el registro como "revisar en admin".
-- LOPD/RGPD: los emails y NIF nunca salen en respuestas públicas; RLS + column-level en las server functions.
-
-¿Empiezo por la Fase 1 (activar Cloud + crear esquema + importar dataset municipios + seed Excel)?
+¿Procedo?
