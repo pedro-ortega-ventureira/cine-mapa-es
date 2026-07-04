@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { bucketFor, POPULATION_BUCKETS, SPAIN_BBOX, CANARIAS_BBOX, isCanarias } from "@/lib/constants";
 
@@ -11,7 +11,9 @@ export type MapPoint = {
   lat: number | null;
   lng: number | null;
   professionals_count?: number;
+  verified_count?: number;
 };
+
 
 type Props = {
   points: MapPoint[];
