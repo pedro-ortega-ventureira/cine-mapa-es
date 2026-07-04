@@ -126,8 +126,9 @@ function Home() {
               onChange={(e) => setOnlyWithPros(e.target.checked)}
               className="rounded"
             />
-            Solo municipios con profesionales
+            Ocultar municipios sin profesionales
           </label>
+
         </div>
         {municipalitiesQ.isLoading ? (
           <div className="aspect-[5/4] rounded-lg bg-muted animate-pulse" />
