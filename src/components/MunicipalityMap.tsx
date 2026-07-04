@@ -175,8 +175,16 @@ export function MunicipalityMap({ points, onlyWithProfessionals, onSelectMunicip
             <div className="mt-1 text-primary font-medium">
               {hover.professionals_count} profesional
               {hover.professionals_count !== 1 ? "es" : ""}
+              {typeof hover.verified_count === "number" &&
+                hover.verified_count !== hover.professionals_count && (
+                  <span className="text-muted-foreground font-normal">
+                    {" "}· {hover.verified_count} verificado
+                    {hover.verified_count !== 1 ? "s" : ""}
+                  </span>
+                )}
             </div>
           )}
+
         </div>
       )}
 
