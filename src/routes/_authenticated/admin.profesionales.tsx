@@ -32,6 +32,10 @@ function AdminPros() {
 
   const setVerifiedFn = useServerFn(setVerified);
   const deleteFn = useServerFn(deleteProfessional);
+  const backfillFn = useServerFn(backfillMunicipalities);
+  const verifyAllFn = useServerFn(bulkVerifyAll);
+  const [busy, setBusy] = useState<string | null>(null);
+
 
   const profsQ = useQuery({
     queryKey: ["admin-professionals", search],
