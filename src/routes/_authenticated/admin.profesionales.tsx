@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { setVerified, deleteProfessional, upsertProfessional } from "@/lib/professionals.functions";
+import {
+  setVerified,
+  deleteProfessional,
+  upsertProfessional,
+  backfillMunicipalities,
+  bulkVerifyAll,
+} from "@/lib/professionals.functions";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, MapPin, ShieldCheck } from "lucide-react";
 import { PRIMARY_ROLES, PRODUCTION_TYPES, slugify } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/admin/profesionales")({
   component: AdminPros,
 });
+
 
 function AdminPros() {
   const qc = useQueryClient();
