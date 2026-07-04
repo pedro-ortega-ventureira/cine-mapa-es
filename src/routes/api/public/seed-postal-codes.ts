@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 
 // One-shot loader: fetches a public dataset of Spanish postal codes ↔ INE municipality
 // codes and writes them to municipalities.postal_codes[]. Idempotent.
-// Source: https://github.com/inigoflores/ds-codigos-postales-espana (public domain aggregation of INE data).
+// Source: https://github.com/d-maza/codigos-postales-spain (public aggregation of INE data).
 const DATASET_URL =
-  "https://raw.githubusercontent.com/inigoflores/ds-codigos-postales-espana/master/data/codigos_postales_municipios.json";
+  "https://raw.githubusercontent.com/d-maza/codigos-postales-spain/master/codigos-postales.json";
+
 
 export const Route = createFileRoute("/api/public/seed-postal-codes")({
   server: {
