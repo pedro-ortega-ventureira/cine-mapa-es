@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.seed_municipalities_batch(jsonb) FROM PUBLIC, anon, authenticated;
