@@ -348,6 +348,7 @@ export type Database = {
           population: number | null
           professionals_count: number | null
           province: string | null
+          verified_count: number | null
         }
         Relationships: []
       }
@@ -362,6 +363,7 @@ export type Database = {
       }
       increment_profile_views: { Args: { _slug: string }; Returns: undefined }
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number }
+      seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "editor" | "user"
