@@ -6,6 +6,7 @@ export function SiteHeader() {
   const nav = [
     { to: "/", label: "Inicio" },
     { to: "/directorio", label: "Directorio" },
+    { to: "/mapa", label: "Mapa" },
     { to: "/admin", label: "Admin" },
   ] as const;
   return (

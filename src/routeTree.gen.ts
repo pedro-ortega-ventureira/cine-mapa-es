@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -25,6 +26,11 @@ import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
 import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
 
+const MapaRoute = MapaRouteImport.update({
+  id: '/mapa',
+  path: '/mapa',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DirectorioRoute = DirectorioRouteImport.update({
   id: '/directorio',
   path: '/directorio',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
+  '/mapa': typeof MapaRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
+  '/mapa': typeof MapaRoute
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
   '/admin/importar': typeof AuthenticatedAdminImportarRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
+  '/mapa': typeof MapaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/directorio'
+    | '/mapa'
     | '/admin'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/directorio'
+    | '/mapa'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
     | '/admin/importar'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/directorio'
+    | '/mapa'
     | '/_authenticated/admin'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DirectorioRoute: typeof DirectorioRoute
+  MapaRoute: typeof MapaRoute
   MunicipiosCodigoRoute: typeof MunicipiosCodigoRoute
   ProfesionalesSlugRoute: typeof ProfesionalesSlugRoute
   ApiPublicSeedCpGeoRoute: typeof ApiPublicSeedCpGeoRoute
@@ -220,6 +233,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mapa': {
+      id: '/mapa'
+      path: '/mapa'
+      fullPath: '/mapa'
+      preLoaderRoute: typeof MapaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/directorio': {
       id: '/directorio'
       path: '/directorio'
@@ -361,6 +381,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DirectorioRoute: DirectorioRoute,
+  MapaRoute: MapaRoute,
   MunicipiosCodigoRoute: MunicipiosCodigoRoute,
   ProfesionalesSlugRoute: ProfesionalesSlugRoute,
   ApiPublicSeedCpGeoRoute: ApiPublicSeedCpGeoRoute,
