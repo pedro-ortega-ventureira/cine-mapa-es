@@ -9,6 +9,7 @@ import {
   backfillMunicipalities,
   bulkVerifyAll,
 } from "@/lib/professionals.functions";
+import { resolveProfessionalGeo } from "@/lib/professionals-geo.functions";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ function AdminPros() {
   const deleteFn = useServerFn(deleteProfessional);
   const backfillFn = useServerFn(backfillMunicipalities);
   const verifyAllFn = useServerFn(bulkVerifyAll);
+  const resolveGeoFn = useServerFn(resolveProfessionalGeo);
   const [busy, setBusy] = useState<string | null>(null);
 
 
@@ -113,9 +115,8 @@ function AdminPros() {
             onClick={async () => {
               setBusy("geo");
               try {
-                const res = await fetch("/api/public/seed-cp-geo");
-                const r = await res.json();
-                if (!res.ok) throw new Error(r.error || `HTTP ${res.status}`);
+                const r = await resolveGeoFn({});
+                if (!r.ok) throw new Error("Fallo");
                 toast.success(
                   `Geo: ${r.exact} exactos · ${r.province} aproximados · ${r.none} sin CP`,
                 );
