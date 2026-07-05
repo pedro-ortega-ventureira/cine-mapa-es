@@ -1,62 +1,81 @@
-## Diagnóstico
+## Objetivo
 
-El mapa SÍ se renderiza (SVG presente), pero está vacío porque:
+Mapa real de España con marcadores clusterizados de los 113 profesionales, geolocalizados por su CP de origen (no por `municipality_code`, que hoy no es fiable).
 
-1. La casilla **"Solo municipios con profesionales"** está activada por defecto.
-2. De los **113 profesionales importados** desde el Excel, **0 tienen `municipality_code`** (el CP no se resolvió a municipio: `municipalities.postal_codes` está vacío para las 8.112 filas).
-3. Además, **0 están `verified=true`**, por lo que aunque tuvieran municipio no contarían en la vista pública del mapa.
+## Estado detectado
 
-## Cambios propuestos
+- 113 profesionales; 94 con `raw_postal_code`.
+- 8.112 municipios cargados, pero `postal_codes` vacío en **todos** (el seed anterior falló porque los `code` son slugs, no INE de 5 dígitos).
+- No hay librería de mapas instalada. El `MunicipalityMap.tsx` actual es SVG a mano y se conserva en la home.
 
-### 1. Mapa siempre visible con capa base
-- Desactivar por defecto "Solo con profesionales" → verás los ~7.700 municipios como puntos pequeños atenuados coloreados por población.
-- Cambiar la lógica del toggle a "Resaltar solo con profesionales" (oculta la capa base cuando se marca), en vez de esconder todo.
+## Enfoque
 
-### 2. Halo / buffer sobre municipios con profesionales
-En `MunicipalityMap.tsx`, para cada municipio con `professionals_count > 0` renderizar **dos círculos concéntricos**:
+Resolver CP directamente contra un dataset público CP→(lat, lng, municipio, provincia), sin depender de `municipalities.code`. Guardar el resultado en columnas nuevas de `professionals` para que el mapa sea una lectura trivial.
 
-- **Buffer exterior**: radio 8–18 px (según nº de profesionales), `fill` del color de la escala de población, `fillOpacity ≈ 0.18`, sin borde — actúa como halo/glow.
-- **Punto interior**: 3–6 px, sólido, borde blanco (comportamiento actual).
+### 1. Datos
 
-Los municipios sin profesionales se mantienen como puntos pequeños de 1.4 px semi-transparentes (capa base). Efecto: los municipios con actividad "brillan" sobre el mapa base.
+Nueva migración añade a `professionals`:
 
-### 3. Resolver CP → municipio (para los 113 importados)
+- `geo_lat double precision`
+- `geo_lng double precision`
+- `geo_accuracy text` — `exact` | `province` | `none`
+- `geo_municipality_name text`
+- `geo_province text`
 
-**Plan de datos**:
-- Descargar dataset público de códigos postales de España (INE / OpenData: ~55.000 pares CP↔municipio, ~1 MB CSV).
-- Nueva función RPC `seed_postal_codes_batch(jsonb)` (security definer, misma pauta que `seed_municipalities_batch`) que rellena `municipalities.postal_codes` en lotes.
-- Endpoint `/api/public/seed-postal-codes` (uno solo) que descarga el dataset y llama a la RPC. Después la revoco como hicimos con la anterior.
+Nuevo endpoint `GET /api/public/seed-cp-geo` que:
 
-**Backfill de profesionales existentes**:
-- Función `backfillMunicipalities` (admin) que recorre `professionals` con `raw_postal_code IS NOT NULL AND municipality_code IS NULL` y resuelve vía `postal_codes @> [cp]`.
-- Cuando un CP mapea a **varios municipios** (habitual en zonas rurales agrupadas), se marca el registro con `tags += "revisar-cp"` para que el admin elija manualmente.
-- Botón "Resolver CPs pendientes" en `/admin/profesionales` que muestra cuántos quedan.
+1. Descarga dataset público (`inigoflores/ds-codigos-postales-espana`, CSV: `codigo_postal, municipio_id (INE), municipio, provincia, latitud, longitud`).
+2. Construye dos mapas en memoria: `cp → {lat,lng,muni,prov}` y `prov2 → centroide` (media de lat/lng de los CP de esa provincia).
+3. Recorre todos los `professionals`:
+   - CP exacto → `geo_accuracy='exact'`, coords del CP.
+   - Solo 2 primeros dígitos → `geo_accuracy='province'`, centroide provincial.
+   - Sin CP válido → `geo_accuracy='none'`.
+4. Escribe vía RPC `set_professional_geo_batch(_payload jsonb)` (SECURITY DEFINER, actualiza solo esos 5 campos).
 
-### 4. Visibilidad de los 113 importados en el mapa
-Dos opciones (elijo la B por defecto):
+Botón "Resolver geolocalización" añadido en `/admin/profesionales` que llama al endpoint y muestra el desglose (exactos / aproximados / sin CP).
 
-- A) Dejar el mapa mostrando solo `verified=true` → hay que verificarlos uno a uno.
-- **B) Contar en el mapa a todos los profesionales con `municipality_code`, verificados o no**, pero seguir ocultando los NO verificados en el perfil público (`/profesionales/:slug`) y en el listado del directorio.
-  - Ajuste: crear una vista `municipality_stats_all` (o parametrizar la existente) que cuente `professionals` sin filtro de `verified`. En `/directorio` y perfil público seguimos filtrando por `verified=true`.
+### 2. Librería de mapa
 
-Así el mapa muestra ya la actividad importada mientras se validan las fichas.
+Instalar `react-leaflet` + `leaflet` + `leaflet.markercluster` + `@types/leaflet`. Tiles de OpenStreetMap (gratis, sin API key). Escalable a miles de marcadores con clustering nativo.
 
-### 5. Ajustes menores
-- Tooltip: mostrar "X profesional(es) · Y verificado(s)" cuando difieran.
-- Añadir botón "Verificar todos los importados" en `/admin/profesionales` (bulk update).
+### 3. Nueva ruta `/mapa`
 
-## Detalles técnicos
+- Mapa Leaflet centrado en península (Canarias visibles al hacer pan/zoom; Leaflet permite ver ambas sin recuadro forzado — si el usuario lo prefiere en recuadro, hacemos un segundo mini-mapa después).
+- `MarkerClusterGroup` con los profesionales `exact` + `province`.
+- Marcador exacto: pin normal. Marcador aproximado: pin gris translúcido con etiqueta "ubicación aproximada" en el popup.
+- Popup por marcador: foto, nombre, alias, rol principal, municipio/provincia, badge "verificado", enlace a la ficha.
+- Cluster: número de profesionales; al hacer click, zoom hasta expandir.
+- Cabecera con contadores: `X geolocalizados · Y aproximados · Z pendientes`.
+- Filtro rápido: checkbox "Solo verificados", checkbox "Ocultar aproximados".
+- SSR-safe: el mapa se carga dentro de `<ClientOnly>` (Leaflet toca `window`).
 
-- Ficheros a tocar: `src/components/MunicipalityMap.tsx`, `src/routes/index.tsx`, `src/lib/professionals.functions.ts` (backfill), `src/routes/_authenticated/admin.profesionales.tsx` (botones), migración SQL (RPC `seed_postal_codes_batch`, vista `municipality_stats_all`).
-- Dataset postal: uso `https://github.com/inigoflores/ds-codigos-postales-espana` o el CSV de datos.gob.es. Peso final en tabla: sólo el array `postal_codes` en cada municipio, sin tabla auxiliar.
-- El halo (buffer) es puramente SVG, sin librerías nuevas.
+### 4. Navegación
 
-## Orden de ejecución
+- Añadir enlace "Mapa" en `SiteHeader`.
+- El mapa SVG actual de la home se mantiene (es agregado por municipio, no por profesional — cumplen funciones distintas).
 
-1. Migración: RPC `seed_postal_codes_batch` + vista `municipality_stats_all`.
-2. Endpoint de carga de CPs + ejecutarlo.
-3. Backfill de `municipality_code` en profesionales existentes.
-4. Ajustes del mapa (buffer + capa base siempre visible + toggle invertido).
-5. Botones admin (verificar todos, resolver CPs pendientes).
+### 5. Rendimiento
 
-¿Procedo?
+- Fetch único: `professionals` con `geo_lat not null`, proyectando solo columnas necesarias, cacheado con React Query.
+- `MarkerClusterGroup` maneja miles de puntos sin problema.
+- Iconos como singletons (no crear `L.Icon` por marcador).
+
+## Ficheros
+
+**Nuevos**
+- `supabase/migrations/*_professionals_geo.sql` — columnas + RPC.
+- `src/routes/api/public/seed-cp-geo.ts` — carga y resuelve.
+- `src/lib/professionals-geo.functions.ts` — server fn admin para disparar el proceso.
+- `src/routes/mapa.tsx` — nueva ruta pública.
+- `src/components/ProfessionalsLeafletMap.tsx` — componente cliente.
+
+**Modificados**
+- `package.json` — añadir deps.
+- `src/routes/_authenticated/admin.profesionales.tsx` — botón "Resolver geolocalización".
+- `src/components/SiteHeader.tsx` — enlace "Mapa".
+- `src/routes/__root.tsx` — `<link>` al CSS de Leaflet y MarkerCluster.
+
+## Confirmación pedida
+
+- ¿OK usar dataset público `inigoflores/ds-codigos-postales-espana` (INE + coordenadas)? Es lo que evita geocodificación de pago.
+- ¿Canarias en el mismo mapa con pan/zoom libre (opción por defecto de Leaflet), o quieres el recuadro clásico separado? Lo segundo requiere un segundo `MapContainer` sincronizado y añade complejidad; recomiendo la primera opción.
