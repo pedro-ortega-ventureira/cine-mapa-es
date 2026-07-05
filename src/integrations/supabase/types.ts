@@ -202,6 +202,11 @@ export type Database = {
           equipment_owned: string[] | null
           full_name: string
           gender: Database["public"]["Enums"]["gender_enum"] | null
+          geo_accuracy: string | null
+          geo_lat: number | null
+          geo_lng: number | null
+          geo_municipality_name: string | null
+          geo_province: string | null
           id: string
           languages: string[] | null
           municipality_code: string | null
@@ -238,6 +243,11 @@ export type Database = {
           equipment_owned?: string[] | null
           full_name: string
           gender?: Database["public"]["Enums"]["gender_enum"] | null
+          geo_accuracy?: string | null
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_municipality_name?: string | null
+          geo_province?: string | null
           id?: string
           languages?: string[] | null
           municipality_code?: string | null
@@ -274,6 +284,11 @@ export type Database = {
           equipment_owned?: string[] | null
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_enum"] | null
+          geo_accuracy?: string | null
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_municipality_name?: string | null
+          geo_province?: string | null
           id?: string
           languages?: string[] | null
           municipality_code?: string | null
@@ -364,6 +379,7 @@ export type Database = {
       increment_profile_views: { Args: { _slug: string }; Returns: undefined }
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number }
       seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number }
+      set_professional_geo_batch: { Args: { _payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "editor" | "user"
