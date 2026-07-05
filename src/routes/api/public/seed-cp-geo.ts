@@ -43,10 +43,11 @@ export const Route = createFileRoute("/api/public/seed-cp-geo")({
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          const { data: pros, error: readErr } = await supabaseAdmin
+          const { data: pros, error: readErr, count } = await supabaseAdmin
             .from("professionals")
-            .select("id, raw_postal_code");
-          if (readErr) return Response.json({ error: readErr.message }, { status: 500 });
+            .select("id, raw_postal_code", { count: "exact" });
+          if (readErr) return Response.json({ error: readErr.message, stage: "read" }, { status: 500 });
+          console.log("[seed-cp-geo] read", { rows: pros?.length ?? 0, count });
 
           const rows: GeoRow[] = [];
           const cpCache = new Map<string, { lat: number; lng: number; muni: string; prov: string } | null>();
