@@ -9,6 +9,7 @@ import {
   backfillMunicipalities,
   bulkVerifyAll,
 } from "@/lib/professionals.functions";
+import { resolveProfessionalGeo } from "@/lib/professionals-geo.functions";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ function AdminPros() {
   const deleteFn = useServerFn(deleteProfessional);
   const backfillFn = useServerFn(backfillMunicipalities);
   const verifyAllFn = useServerFn(bulkVerifyAll);
+  const resolveGeoFn = useServerFn(resolveProfessionalGeo);
   const [busy, setBusy] = useState<string | null>(null);
 
 
@@ -105,6 +107,30 @@ function AdminPros() {
           >
             <MapPin className="h-4 w-4 mr-2" />
             {busy === "backfill" ? "Resolviendo…" : "Resolver CPs"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy !== null}
+            onClick={async () => {
+              setBusy("geo");
+              try {
+                const r = await resolveGeoFn({});
+                if (!r.ok) throw new Error("Fallo");
+                toast.success(
+                  `Geo: ${r.exact} exactos · ${r.province} aproximados · ${r.none} sin CP`,
+                );
+                qc.invalidateQueries({ queryKey: ["admin-professionals"] });
+                qc.invalidateQueries({ queryKey: ["map-professionals"] });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Error");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            {busy === "geo" ? "Geolocalizando…" : "Resolver geolocalización"}
           </Button>
           <Button
             variant="outline"

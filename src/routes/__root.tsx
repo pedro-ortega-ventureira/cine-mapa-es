@@ -95,6 +95,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
+      {
+        rel: "stylesheet",
+        href: "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
+      },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
