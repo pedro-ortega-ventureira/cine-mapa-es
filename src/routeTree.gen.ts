@@ -20,6 +20,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as ApiTmdbSplatRouteImport } from './routes/api/tmdb.$'
 import { Route as ApiPublicSeedPostalCodesRouteImport } from './routes/api/public/seed-postal-codes'
 import { Route as ApiPublicSeedMunicipalitiesRouteImport } from './routes/api/public/seed-municipalities'
+import { Route as ApiPublicSeedCpGeoRouteImport } from './routes/api/public/seed-cp-geo'
 import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_authenticated/admin.profesionales'
 import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
 import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
@@ -80,6 +81,11 @@ const ApiPublicSeedMunicipalitiesRoute =
     path: '/api/public/seed-municipalities',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSeedCpGeoRoute = ApiPublicSeedCpGeoRouteImport.update({
+  id: '/api/public/seed-cp-geo',
+  path: '/api/public/seed-cp-geo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminProfesionalesRoute =
   AuthenticatedAdminProfesionalesRouteImport.update({
     id: '/profesionales',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
   '/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-cp-geo': typeof ApiPublicSeedCpGeoRoute
   '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
   '/api/public/seed-postal-codes': typeof ApiPublicSeedPostalCodesRoute
   '/api/tmdb/$': typeof ApiTmdbSplatRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
   '/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-cp-geo': typeof ApiPublicSeedCpGeoRoute
   '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
   '/api/public/seed-postal-codes': typeof ApiPublicSeedPostalCodesRoute
   '/api/tmdb/$': typeof ApiTmdbSplatRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/_authenticated/admin/municipios': typeof AuthenticatedAdminMunicipiosRoute
   '/_authenticated/admin/profesionales': typeof AuthenticatedAdminProfesionalesRoute
+  '/api/public/seed-cp-geo': typeof ApiPublicSeedCpGeoRoute
   '/api/public/seed-municipalities': typeof ApiPublicSeedMunicipalitiesRoute
   '/api/public/seed-postal-codes': typeof ApiPublicSeedPostalCodesRoute
   '/api/tmdb/$': typeof ApiTmdbSplatRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/admin/importar'
     | '/admin/municipios'
     | '/admin/profesionales'
+    | '/api/public/seed-cp-geo'
     | '/api/public/seed-municipalities'
     | '/api/public/seed-postal-codes'
     | '/api/tmdb/$'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/admin/importar'
     | '/admin/municipios'
     | '/admin/profesionales'
+    | '/api/public/seed-cp-geo'
     | '/api/public/seed-municipalities'
     | '/api/public/seed-postal-codes'
     | '/api/tmdb/$'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/importar'
     | '/_authenticated/admin/municipios'
     | '/_authenticated/admin/profesionales'
+    | '/api/public/seed-cp-geo'
     | '/api/public/seed-municipalities'
     | '/api/public/seed-postal-codes'
     | '/api/tmdb/$'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   DirectorioRoute: typeof DirectorioRoute
   MunicipiosCodigoRoute: typeof MunicipiosCodigoRoute
   ProfesionalesSlugRoute: typeof ProfesionalesSlugRoute
+  ApiPublicSeedCpGeoRoute: typeof ApiPublicSeedCpGeoRoute
   ApiPublicSeedMunicipalitiesRoute: typeof ApiPublicSeedMunicipalitiesRoute
   ApiPublicSeedPostalCodesRoute: typeof ApiPublicSeedPostalCodesRoute
   ApiTmdbSplatRoute: typeof ApiTmdbSplatRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSeedMunicipalitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/seed-cp-geo': {
+      id: '/api/public/seed-cp-geo'
+      path: '/api/public/seed-cp-geo'
+      fullPath: '/api/public/seed-cp-geo'
+      preLoaderRoute: typeof ApiPublicSeedCpGeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/profesionales': {
       id: '/_authenticated/admin/profesionales'
       path: '/profesionales'
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   DirectorioRoute: DirectorioRoute,
   MunicipiosCodigoRoute: MunicipiosCodigoRoute,
   ProfesionalesSlugRoute: ProfesionalesSlugRoute,
+  ApiPublicSeedCpGeoRoute: ApiPublicSeedCpGeoRoute,
   ApiPublicSeedMunicipalitiesRoute: ApiPublicSeedMunicipalitiesRoute,
   ApiPublicSeedPostalCodesRoute: ApiPublicSeedPostalCodesRoute,
   ApiTmdbSplatRoute: ApiTmdbSplatRoute,
