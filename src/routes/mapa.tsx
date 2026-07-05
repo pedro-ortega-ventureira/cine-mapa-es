@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, ShieldCheck, HelpCircle } from "lucide-react";
 
@@ -46,6 +46,8 @@ type Row = {
 };
 
 function MapPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [hideApprox, setHideApprox] = useState(false);
 
@@ -129,7 +131,7 @@ function MapPage() {
         <Stat icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />} label="Total mostrados" value={visible.length} />
       </div>
 
-      {q.isLoading ? (
+      {q.isLoading || !mounted ? (
         <div className="rounded-lg border bg-muted animate-pulse" style={{ height: 480 }} />
       ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
