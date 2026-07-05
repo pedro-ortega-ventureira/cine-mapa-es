@@ -111,6 +111,31 @@ function AdminPros() {
             size="sm"
             disabled={busy !== null}
             onClick={async () => {
+              setBusy("geo");
+              try {
+                const res = await fetch("/api/public/seed-cp-geo");
+                const r = await res.json();
+                if (!res.ok) throw new Error(r.error || `HTTP ${res.status}`);
+                toast.success(
+                  `Geo: ${r.exact} exactos · ${r.province} aproximados · ${r.none} sin CP`,
+                );
+                qc.invalidateQueries({ queryKey: ["admin-professionals"] });
+                qc.invalidateQueries({ queryKey: ["map-professionals"] });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Error");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            {busy === "geo" ? "Geolocalizando…" : "Resolver geolocalización"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy !== null}
+            onClick={async () => {
               if (!confirm("¿Verificar TODOS los profesionales no verificados?")) return;
               setBusy("verify");
               try {
