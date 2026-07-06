@@ -138,10 +138,10 @@ function MapPage() {
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-[#2A81CB]" /> Ubicación exacta
+          <span className="inline-block h-4 w-4 rounded-full bg-primary border-2 border-white shadow" /> Ubicación exacta (foto del profesional)
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white" /> Aproximada (centroide de provincia)
+          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white border-dashed" /> Aproximada (centroide de provincia)
         </span>
       </div>
     </div>
