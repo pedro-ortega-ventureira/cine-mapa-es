@@ -48,7 +48,6 @@ type Row = {
 function MapPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const [onlyVerified, setOnlyVerified] = useState(false);
   const [hideApprox, setHideApprox] = useState(false);
 
   const q = useQuery({
@@ -77,7 +76,6 @@ function MapPage() {
 
   const visible = useMemo(() => {
     return geolocated
-      .filter((r) => (onlyVerified ? r.verified : true))
       .filter((r) => (hideApprox ? r.geo_accuracy === "exact" : true))
       .map((r) => ({
         id: r.id,
@@ -93,42 +91,34 @@ function MapPage() {
         geo_municipality_name: r.geo_municipality_name,
         geo_province: r.geo_province,
       }));
-  }, [geolocated, onlyVerified, hideApprox]);
+  }, [geolocated, hideApprox]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mapa de profesionales</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mapa de profesionales verificados</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Cada punto es una persona. Los grupos se abren al hacer zoom.
+            Cada punto es una persona verificada. Los grupos se abren al hacer zoom.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <label className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 cursor-pointer bg-card">
             <input
               type="checkbox"
-              checked={onlyVerified}
-              onChange={(e) => setOnlyVerified(e.target.checked)}
-            />
-            Solo verificados
-          </label>
-          <label className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 cursor-pointer bg-card">
-            <input
-              type="checkbox"
               checked={hideApprox}
               onChange={(e) => setHideApprox(e.target.checked)}
             />
-            Ocultar aproximados
+            Solo ubicación exacta
           </label>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-sm">
-        <Stat icon={<MapPin className="h-4 w-4 text-primary" />} label="Geolocalizados" value={exact.length} />
+        <Stat icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />} label="Verificados" value={all.length} />
+        <Stat icon={<MapPin className="h-4 w-4 text-primary" />} label="Ubicación exacta" value={exact.length} />
         <Stat icon={<HelpCircle className="h-4 w-4 text-amber-600" />} label="Aproximados (provincia)" value={approx.length} />
         <Stat icon={<HelpCircle className="h-4 w-4 text-muted-foreground" />} label="Sin geolocalizar" value={pending} />
-        <Stat icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />} label="Total mostrados" value={visible.length} />
       </div>
 
       {q.isLoading || !mounted ? (
@@ -148,10 +138,10 @@ function MapPage() {
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-[#2A81CB]" /> Ubicación exacta
+          <span className="inline-block h-4 w-4 rounded-full bg-primary border-2 border-white shadow" /> Ubicación exacta (foto del profesional)
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white" /> Aproximada (centroide de provincia)
+          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white border-dashed" /> Aproximada (centroide de provincia)
         </span>
       </div>
     </div>
