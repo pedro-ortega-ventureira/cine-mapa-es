@@ -45,10 +45,10 @@ function Home() {
     queryFn: async () => {
       const { data } = await supabase
         .from("professionals")
-        .select("id,slug,full_name,alias,photo_url,primary_role,municipality_code")
+        .select("id,slug,full_name,alias,photo_url,primary_role,geo_municipality_name,geo_province")
         .eq("verified", true)
         .order("date_joined", { ascending: false })
-        .limit(6);
+        .limit(12);
       return data ?? [];
     },
   });
