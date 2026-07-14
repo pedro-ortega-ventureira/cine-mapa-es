@@ -20,10 +20,6 @@ export type MapProfessional = {
 // -------- Icon cache: one divIcon per (photo|initials+hue) --------
 const iconCache = new Map<string, L.DivIcon>();
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
-}
 
 // Paleta por profesión. Mismos colores que se muestran en la leyenda.
 export const ROLE_COLORS: Record<string, string> = {
