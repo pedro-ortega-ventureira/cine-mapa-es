@@ -97,16 +97,16 @@ const approxIcon = L.divIcon({
 function popupHtml(p: MapProfessional) {
   const photo = p.photo_url
     ? `<img src="${escapeAttr(p.photo_url)}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;float:left;margin-right:8px" />`
-    : "";
+    : `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${colorForRole(p.primary_role)};border:2px solid white;box-shadow:0 1px 2px rgba(0,0,0,.3);float:left;margin:4px 8px 0 0"></span>`;
   const verified = p.verified
     ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:#dcfce7;color:#166534;font-size:11px;margin-left:4px">verificado</span>`
     : "";
   const approx =
     p.geo_accuracy === "province"
-      ? `<div style="color:#a16207;font-size:11px;margin-top:4px">📍 ubicación aproximada (provincia)</div>`
+      ? ` <span style="color:#a16207">(aprox.)</span>`
       : "";
   const loc =
-    [p.geo_municipality_name, p.geo_province].filter(Boolean).join(", ") || "—";
+    [p.geo_municipality_name, p.geo_province].filter(Boolean).join(" / ") || "—";
   return `
     <div style="min-width:220px;font-family:system-ui,sans-serif;line-height:1.35">
       ${photo}
@@ -114,12 +114,13 @@ function popupHtml(p: MapProfessional) {
         <div style="font-weight:600;font-size:14px">${escapeHtml(p.full_name)}${verified}</div>
         ${p.alias ? `<div style="font-size:12px;color:#666">${escapeHtml(p.alias)}</div>` : ""}
         ${p.primary_role ? `<div style="font-size:12px;color:#4f46e5;margin-top:2px">${escapeHtml(p.primary_role)}</div>` : ""}
-        <div style="font-size:12px;color:#666;margin-top:2px">${escapeHtml(loc)}</div>
       </div>
       <div style="clear:both;margin-top:8px">
         <a href="/profesionales/${encodeURIComponent(p.slug)}" style="color:#2563eb;font-size:12px;text-decoration:underline">Ver ficha →</a>
       </div>
-      ${approx}
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid #e5e7eb;font-size:11px;color:#475569">
+        📍 ${escapeHtml(loc)}${approx}
+      </div>
     </div>
   `;
 }
