@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MunicipalityMap, type MapPoint } from "@/components/MunicipalityMap";
+import { colorForRole } from "@/lib/roles";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Users, MapPin, Film } from "lucide-react";
@@ -45,10 +46,10 @@ function Home() {
     queryFn: async () => {
       const { data } = await supabase
         .from("professionals")
-        .select("id,slug,full_name,alias,photo_url,primary_role,municipality_code")
+        .select("id,slug,full_name,alias,photo_url,primary_role,geo_municipality_name,geo_province")
         .eq("verified", true)
         .order("date_joined", { ascending: false })
-        .limit(6);
+        .limit(12);
       return data ?? [];
     },
   });
@@ -159,32 +160,49 @@ function Home() {
       {latestQ.data && latestQ.data.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-8">
           <h2 className="text-lg font-semibold mb-4">Últimos perfiles añadidos</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {latestQ.data.map((p: any) => (
-              <Link
-                key={p.id}
-                to="/profesionales/$slug"
-                params={{ slug: p.slug }}
-                className="group block rounded-lg border overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="aspect-square bg-muted overflow-hidden">
-                  {p.photo_url ? (
-                    <img src={p.photo_url} alt={p.full_name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <Users className="h-8 w-8" />
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {latestQ.data.map((p: any) => {
+              const loc = [p.geo_municipality_name, p.geo_province].filter(Boolean).join(" / ");
+              return (
+                <li key={p.id}>
+                  <Link
+                    to="/profesionales/$slug"
+                    params={{ slug: p.slug }}
+                    className="group flex items-center gap-3 rounded-lg border bg-card p-2.5 hover:shadow-sm hover:border-primary/40 transition"
+                  >
+                    {p.photo_url ? (
+                      <img
+                        src={p.photo_url}
+                        alt={p.full_name}
+                        className="h-10 w-10 rounded-full object-cover border border-white shadow-sm shrink-0"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="h-4 w-4 rounded-full border-2 border-white shadow-sm shrink-0"
+                        style={{ backgroundColor: colorForRole(p.primary_role) }}
+                        title={p.primary_role ?? undefined}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-tight truncate">{p.full_name}</p>
+                      {p.primary_role && (
+                        <p className="text-xs truncate" style={{ color: colorForRole(p.primary_role) }}>
+                          {p.primary_role}
+                        </p>
+                      )}
+                      {loc && (
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                          <MapPin className="inline h-3 w-3 -mt-0.5 mr-0.5" />
+                          {loc}
+                        </p>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="p-2">
-                  <p className="text-xs font-medium leading-tight truncate">{p.full_name}</p>
-                  {p.primary_role && (
-                    <p className="text-[10px] text-muted-foreground truncate">{p.primary_role}</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
     </div>
