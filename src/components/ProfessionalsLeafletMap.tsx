@@ -25,32 +25,59 @@ function initials(name: string): string {
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-function hueFromId(id: string): number {
+// Paleta por profesión. Mismos colores que se muestran en la leyenda.
+export const ROLE_COLORS: Record<string, string> = {
+  "Dirección": "#ef4444",
+  "Guion": "#f97316",
+  "Producción": "#eab308",
+  "Dirección de fotografía": "#84cc16",
+  "Cámara": "#22c55e",
+  "Sonido": "#06b6d4",
+  "Montaje": "#3b82f6",
+  "Arte": "#8b5cf6",
+  "Vestuario": "#ec4899",
+  "Maquillaje": "#f43f5e",
+  "Interpretación": "#14b8a6",
+  "VFX": "#a855f7",
+  "Postproducción": "#6366f1",
+};
+const ROLE_DEFAULT = "#64748b";
+
+function colorForRole(role: string | null): string {
+  if (!role) return ROLE_DEFAULT;
+  if (ROLE_COLORS[role]) return ROLE_COLORS[role];
+  // fallback: hash → hue estable
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return Math.abs(h) % 360;
+  for (let i = 0; i < role.length; i++) h = (h * 31 + role.charCodeAt(i)) | 0;
+  return `hsl(${Math.abs(h) % 360} 65% 50%)`;
 }
 
 function exactIconFor(p: MapProfessional): L.DivIcon {
-  const key = p.photo_url ? `p:${p.photo_url}` : `i:${p.id}:${p.full_name}`;
+  const key = p.photo_url
+    ? `p:${p.photo_url}`
+    : `d:${p.primary_role ?? "_"}:${p.verified ? 1 : 0}`;
   const hit = iconCache.get(key);
   if (hit) return hit;
 
-  const size = 40;
-  const badge = p.verified
-    ? `<span style="position:absolute;right:-2px;bottom:-2px;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;line-height:1;font-weight:700">✓</span>`
-    : "";
-
-  const inner = p.photo_url
-    ? `<div style="width:100%;height:100%;border-radius:50%;background-image:url('${escapeAttr(p.photo_url)}');background-size:cover;background-position:center"></div>`
-    : `<div style="width:100%;height:100%;border-radius:50%;background:hsl(${hueFromId(p.id)} 65% 50%);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:system-ui,sans-serif">${escapeHtml(initials(p.full_name))}</div>`;
-
-  const html = `
-    <div style="position:relative;width:${size}px;height:${size}px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);overflow:visible;background:white">
-      <div style="position:absolute;inset:0;border-radius:50%;overflow:hidden">${inner}</div>
-      ${badge}
-    </div>
-  `;
+  let html: string;
+  let size: number;
+  if (p.photo_url) {
+    size = 40;
+    const badge = p.verified
+      ? `<span style="position:absolute;right:-2px;bottom:-2px;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;line-height:1;font-weight:700">✓</span>`
+      : "";
+    html = `
+      <div style="position:relative;width:${size}px;height:${size}px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);overflow:visible;background:white">
+        <div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;background-image:url('${escapeAttr(p.photo_url)}');background-size:cover;background-position:center"></div>
+        ${badge}
+      </div>
+    `;
+  } else {
+    // Sin foto → punto pequeño coloreado por profesión
+    size = 16;
+    const color = colorForRole(p.primary_role);
+    html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`;
+  }
 
   const icon = L.divIcon({
     className: "leaflet-photo-marker",
