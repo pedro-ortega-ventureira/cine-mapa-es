@@ -15,9 +15,18 @@ const MunicipalityContourMap = lazy(() =>
 
 export const Route = createFileRoute("/profesionales/$slug")({
   loader: async ({ params }) => {
+    const publicCols = [
+      "id","slug","full_name","alias","photo_url","primary_role","secondary_roles",
+      "production_types","municipality_code","tags","bio","awards","education",
+      "languages","nationality","gender","birth_year","years_of_experience",
+      "availability","willing_to_travel","works_remotely","equipment_owned",
+      "union_membership","reel_url","website","social_links","verified",
+      "date_joined","updated_at","profile_views","geo_lat","geo_lng","geo_accuracy",
+      "geo_municipality_name","geo_province","raw_postal_code",
+    ].join(",");
     const { data, error } = await supabase
       .from("professionals")
-      .select("*, filmography_items(*), municipalities(*)")
+      .select(`${publicCols}, filmography_items(*), municipalities(*)`)
       .eq("slug", params.slug)
       .eq("verified", true)
       .maybeSingle();
