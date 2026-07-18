@@ -152,19 +152,24 @@ function Profile() {
         </div>
       </div>
 
-      <div className="mt-6">
-        {p.bio && (
-          <div className="prose prose-sm max-w-none">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.bio}</p>
-          </div>
-        )}
+      {(munic || p.geo_lat || p.geo_municipality_name) && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <MapPin className="h-4 w-4" /> Ubicación
+          </h2>
+          <Suspense fallback={<div className="h-[260px] rounded-md border bg-muted/40 animate-pulse" />}>
+            <MunicipalityContourMap
+              municipalityCode={munic?.code ?? null}
+              municipalityName={munic?.name ?? p.geo_municipality_name ?? null}
+              lat={p.geo_lat ?? munic?.lat ?? null}
+              lng={p.geo_lng ?? munic?.lng ?? null}
+              color={colorForRole(p.primary_role)}
+            />
+          </Suspense>
+        </div>
+      )}
 
-        {p.languages && p.languages.length > 0 && (
-          <p className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
-            <Languages className="h-4 w-4" /> {p.languages.join(", ")}
-          </p>
-        )}
-      </div>
+      <div className="mt-6">
 
 
       {films.length > 0 && (
