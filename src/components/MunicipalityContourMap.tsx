@@ -50,12 +50,18 @@ export function MunicipalityContourMap({
 
     const map = L.map(el, {
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
       scrollWheelZoom: false,
       maxZoom: 18,
     });
     mapRef.current = map;
     map.setView([40.4, -3.7], 5);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(map);
 
     let cancelled = false;
 
@@ -88,16 +94,6 @@ export function MunicipalityContourMap({
         } catch {}
       } else if (lat != null && lng != null) {
         map.setView([lat, lng], 11);
-      }
-
-      if (lat != null && lng != null) {
-        L.circleMarker([lat, lng], {
-          radius: 7,
-          color: "#fff",
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 1,
-        }).addTo(map);
       }
     })();
 
