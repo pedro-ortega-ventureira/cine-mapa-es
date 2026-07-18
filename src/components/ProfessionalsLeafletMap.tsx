@@ -165,6 +165,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
 
     const main = L.map(container, {
       minZoom: 4,
+      maxZoom: 18,
       worldCopyJump: false,
       preferCanvas: true,
       attributionControl: false,
