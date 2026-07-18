@@ -1,10 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Award, GraduationCap, MapPin, Globe, Languages, Mail, Video, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/ContactDialog";
+import { colorForRole } from "@/lib/roles";
+
+const MunicipalityContourMap = lazy(() =>
+  import("@/components/MunicipalityContourMap").then((m) => ({
+    default: m.MunicipalityContourMap,
+  })),
+);
 
 export const Route = createFileRoute("/profesionales/$slug")({
   loader: async ({ params }) => {
@@ -145,6 +152,23 @@ function Profile() {
         </div>
       </div>
 
+      {(munic || p.geo_lat || p.geo_municipality_name) && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <MapPin className="h-4 w-4" /> Ubicación
+          </h2>
+          <Suspense fallback={<div className="h-[260px] rounded-md border bg-muted/40 animate-pulse" />}>
+            <MunicipalityContourMap
+              municipalityCode={munic?.code ?? null}
+              municipalityName={munic?.name ?? p.geo_municipality_name ?? null}
+              lat={p.geo_lat ?? munic?.lat ?? null}
+              lng={p.geo_lng ?? munic?.lng ?? null}
+              color={colorForRole(p.primary_role)}
+            />
+          </Suspense>
+        </div>
+      )}
+
       <div className="mt-6">
         {p.bio && (
           <div className="prose prose-sm max-w-none">
@@ -158,6 +182,8 @@ function Profile() {
           </p>
         )}
       </div>
+
+
 
 
       {films.length > 0 && (
