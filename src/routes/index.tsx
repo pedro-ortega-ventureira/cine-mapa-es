@@ -140,7 +140,7 @@ function Home() {
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span className="font-semibold">{statsQ.data?.municipalities ?? "—"}</span>
-                <span className="text-muted-foreground">municipios representados</span>
+                <span className="text-muted-foreground">municipios menores de 20.000 habitantes</span>
               </div>
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <Film className="h-4 w-4 text-primary" />
