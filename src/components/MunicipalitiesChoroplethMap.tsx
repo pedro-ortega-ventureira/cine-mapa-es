@@ -88,6 +88,10 @@ export function MunicipalitiesChoroplethMap({
   useEffect(() => {
     if (!mainContainerRef.current || mainMapRef.current) return;
 
+    const mainContainer = mainContainerRef.current;
+    mainContainer.innerHTML = "";
+    (mainContainer as any)._leaflet_id = null;
+
     const commonOpts: L.MapOptions = {
       zoomControl: false,
       attributionControl: false,
@@ -97,7 +101,7 @@ export function MunicipalitiesChoroplethMap({
       dragging: true,
     };
 
-    const main = L.map(mainContainerRef.current, {
+    const main = L.map(mainContainer, {
       ...commonOpts,
       zoomControl: true,
       minZoom: 4,
