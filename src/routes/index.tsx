@@ -174,6 +174,7 @@ function Home() {
           >
             <MunicipalitiesChoroplethMap
               overlays={overlays}
+              professionals={mapPros}
               onlyWithProfessionals={onlyWithPros}
               onSelectMunicipality={(code: string) => {
                 window.location.href = `/municipios/${code}`;
@@ -181,6 +182,10 @@ function Home() {
             />
           </Suspense>
         )}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Los puntos de color indican profesionales verificados según su código postal. Los círculos oscuros con número agrupan varios profesionales que comparten el mismo CP.
+        </p>
+
       </section>
 
       {latestQ.data && latestQ.data.length > 0 && (
