@@ -1,75 +1,63 @@
-## Problema detectado
+## Causa real del fallo
 
-La búsqueda actual en `/directorio` tiene tres limitaciones:
+Los `primary_role` en la base de datos no coinciden con la lista `PRIMARY_ROLES` del código. En la BD son cadenas multi-rol separadas por `;` con esta taxonomía real (13 roles canónicos):
 
-1. Solo trae 120 filas y filtra en cliente sobre `full_name`, `alias` y `primary_role`. Con más profesionales, muchos quedan fuera antes de filtrar.
-2. No entiende sinónimos ni raíces: "guion" o "guionista" no acierta si el rol exacto es "Guionista" y hay tildes/mayúsculas de por medio; "director foto" no encuentra "Director/a de Fotografía".
-3. No busca por ubicación textual: escribir "granada" no devuelve profesionales de la provincia de Granada, porque el término nunca se cruza contra `municipalities.province`, `autonomous_community` ni `name`.
+- Dirección / Realización
+- Dirección de fotografía / Cámara
+- Guion
+- Producción
+- Montaje / Edición
+- Sonido
+- Música / Composición
+- Arte / Decorados / Vestuario
+- Efectos visuales / Animación
+- Distribución / Gestión cultural / Marketing
+- Docencia / Investigación
+- Finanzas / Administración
+- Otros / Multidisciplinar
 
-Además, la home envía la consulta directamente a `/directorio?q=…`, así que arreglar el directorio arregla también la home.
+Muchos profesionales tienen valores como `"Dirección / Realización; Guion; Producción"`. Mi sinonimario apuntaba a `"Guionista"`, `"Director/a"`, etc., que no existen en BD, y filtraba con `.eq("primary_role", ...)`, así que nunca acertaba. Por eso "guion" o "guión" no da resultados coherentes.
 
-## Qué se va a construir
+## Corrección
 
-Una búsqueda inteligente que interpreta la caja de texto como una combinación de intenciones (rol + ubicación + texto libre) y aplica los filtros correctos automáticamente.
+### 1. Reescribir `src/lib/roleSynonyms.ts` con la taxonomía real
 
-### 1. Normalización y tokenización
+Mapear los 13 roles canónicos a sus sinónimos normalizados. Ejemplos:
 
-- Función común que quita tildes, pasa a minúsculas y separa la consulta en tokens.
-- Se aplica tanto a la consulta como a los campos comparables (nombre profesional, alias, rol, tags, municipio, provincia, CCAA).
+- `Guion` → `guion`, `guionista`, `guionistas`, `guiones`, `escritor`, `escritora`, `escritura`
+- `Dirección / Realización` → `director`, `directora`, `direccion`, `realizador`, `realizadora`, `realizacion`
+- `Dirección de fotografía / Cámara` → `dop`, `dp`, `fotografia`, `director de fotografia`, `directora de fotografia`, `camara`, `operador`, `operadora`
+- `Montaje / Edición` → `montaje`, `montador`, `montadora`, `edicion`, `editor`, `editora`
+- `Producción` → `produccion`, `productor`, `productora`, `producer`
+- `Sonido` → `sonido`, `sonidista`, `microfonista`, `mezclador`, `mezcladora`
+- `Música / Composición` → `musica`, `composicion`, `compositor`, `compositora`, `bso`, `banda sonora`
+- `Arte / Decorados / Vestuario` → `arte`, `decorados`, `vestuario`, `figurinista`, `escenografia`
+- `Efectos visuales / Animación` → `vfx`, `efectos visuales`, `animacion`, `animador`, `animadora`
+- `Distribución / Gestión cultural / Marketing` → `distribucion`, `marketing`, `gestion cultural`, `distribuidor`, `distribuidora`
+- `Docencia / Investigación` → `docencia`, `docente`, `profesor`, `profesora`, `investigacion`, `investigador`, `investigadora`
+- `Finanzas / Administración` → `finanzas`, `administracion`, `administrativo`, `administrativa`, `contable`
+- `Otros / Multidisciplinar` → `otros`, `multidisciplinar`
 
-### 2. Diccionario de roles con sinónimos
+### 2. Cambiar el filtro por rol en `src/routes/directorio.tsx`
 
-Nuevo mapa en `src/lib/roles.ts` (o `constants.ts`) que asocia cada `PRIMARY_ROLE` a una lista de alias normalizados. Ejemplos:
+Como `primary_role` es texto multi-rol con separador `;`, sustituir `.eq(...)` / `.in(...)` por:
 
-- "Guionista" → ["guion", "guionista", "guionistas", "guiones", "escritor", "escritora"]
-- "Director/a de Fotografía" → ["dop", "director foto", "directora foto", "fotografia", "dirfoto"]
-- "Director/a" → ["director", "directora", "direccion"]
-- "Montador/a" → ["montaje", "montador", "montadora", "editor", "editora"]
-- "Sonidista" → ["sonido", "sonidista"]
-- "Actriz / Actor" → ["actor", "actriz", "interprete"]
-- (etc. para cada rol de `PRIMARY_ROLES`)
+- Un `.or("primary_role.ilike.%Guion%,primary_role.ilike.%Dirección / Realización%,...")` con los roles detectados. Los patrones usan las cadenas canónicas con acentos, tal como están en BD.
+- Escapar comas dentro de los valores del `or()` (los roles canónicos no contienen comas, así que basta con envolver bien).
+- Mantener el filtrado adicional cliente por texto libre.
 
-Un token que coincida con algún alias marca ese rol como "detectado" y se retira de la parte de texto libre.
+Los filtros del panel lateral (`search.rol`) también pasan a usar el mismo ILIKE en lugar de `.eq()` y `PRIMARY_ROLES` se sustituye por la lista real de 13 roles canónicos para que el selector muestre valores que existen de verdad.
 
-### 3. Diccionario de ubicaciones
+### 3. Ajustar `PRIMARY_ROLES` en `src/lib/constants.ts`
 
-Se cargará una vez `municipalities` con `code, name, province, autonomous_community` (ya se carga en la página) y se construyen tres índices normalizados:
+Reemplazarlo por la lista canónica de 13 roles reales de BD. Esto arregla también el selector "Rol principal" del panel lateral, que ahora ofrece opciones que no existen en los datos.
 
-- Set de provincias ("granada", "cadiz", "cordoba"…)
-- Set de comunidades ("andalucia", "canarias"…)
-- Set de nombres de municipio
+### 4. Chips y `secondary_roles`
 
-Un token que coincida con provincia se convierte en filtro por provincia; con CCAA en filtro por CCAA; con municipio en filtro por `municipality_code`. El token se retira del texto libre.
-
-### 4. Consulta a la base de datos
-
-Se cambia la query de `professionals` para no depender del límite de 120 en cliente:
-
-- Si se detectan roles: `primary_role IN (...detectados)` o coincidencia también contra `secondary_roles` (array `contains`/`overlaps`).
-- Si se detecta provincia/CCAA: se filtra por `municipality_code IN (...códigos de esa provincia/CCAA)`.
-- Texto libre restante: `ILIKE` con `%token%` en un `.or()` sobre `full_name`, `alias` y `tags` (texto o array).
-- Se sube el `limit` a 500 y se mantiene el orden por `date_joined`.
-
-Los filtros de la barra lateral (Comunidad, Rol, Tipo) siguen funcionando y se combinan con los detectados en el texto — los explícitos ganan sobre los inferidos.
-
-### 5. UI
-
-- Debajo de la caja de búsqueda aparecen "chips" con lo que el sistema interpretó: p. ej. `Rol: Guionista` `Provincia: Granada`, con una X para quitar cada uno.
-- Si la consulta no matchea nada estructurado, se hace búsqueda de texto plano.
-- La home no necesita cambios: seguirá enviando `?q=` al directorio.
-
-### Detalles técnicos
-
-- Archivos nuevos:
-  - `src/lib/search.ts`: `normalize()`, `tokenize()`, `parseQuery(query, munIndex)` que devuelve `{ roles, provinces, ccaa, municipalities, freeText }`.
-  - `src/lib/roleSynonyms.ts`: mapa rol → sinónimos.
-- Archivos modificados:
-  - `src/routes/directorio.tsx`: usa `parseQuery` con el índice construido a partir de `municipalitiesQ`, aplica filtros en la query Supabase y muestra los chips de interpretación.
-- Sin cambios de base de datos ni de RLS.
-- Consultas Supabase: mantener tipado con `sel = (s: string) => s` si el compilador se ralentiza al ampliar filtros.
+- Los chips ya mostrarán el rol canónico correcto (por ejemplo `Rol: Guion`).
+- El filtro seguirá también aplicando ILIKE contra `primary_role` (que ya contiene la lista completa de roles del profesional separada por `;`), así que no hace falta tocar `secondary_roles`.
 
 ### Fuera de alcance
 
-- No se añade full-text search en Postgres (`tsvector`) — el volumen actual no lo justifica.
-- No se toca la home más allá de que ya se beneficia al pasar la query.
-- No se implementa autocompletado en la caja (solo chips post-parseo).
+- No se normaliza la BD (no se separan los multi-rol en filas propias); se busca dentro del string tal como está.
+- No se tocan las provincias / CCAA / municipios: eso ya funciona bien.
