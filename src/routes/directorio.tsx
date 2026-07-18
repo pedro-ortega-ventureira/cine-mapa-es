@@ -108,9 +108,12 @@ function Directorio() {
         .limit(500);
 
       if (effectiveRoles.length === 1) {
-        query = query.eq("primary_role", effectiveRoles[0]);
+        query = query.ilike("primary_role", `%${effectiveRoles[0]}%`);
       } else if (effectiveRoles.length > 1) {
-        query = query.in("primary_role", effectiveRoles);
+        const orExpr = effectiveRoles
+          .map((r) => `primary_role.ilike.%${r}%`)
+          .join(",");
+        query = query.or(orExpr);
       }
 
       if (search.tipo) query = query.contains("production_types", [search.tipo]);
