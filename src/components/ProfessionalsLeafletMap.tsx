@@ -237,8 +237,18 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       insetMapRef.current = null;
       mainClusterRef.current = null;
       insetClusterRef.current = null;
+      // Clear container ids so strict-mode remounts can reinitialize Leaflet
+      if (mainContainerRef.current) {
+        mainContainerRef.current.innerHTML = "";
+        (mainContainerRef.current as any)._leaflet_id = null;
+      }
+      if (insetContainerRef.current) {
+        insetContainerRef.current.innerHTML = "";
+        (insetContainerRef.current as any)._leaflet_id = null;
+      }
     };
   }, []);
+
 
   const key = useMemo(() => professionals.map((p) => p.id).join("|"), [professionals]);
   useEffect(() => {
