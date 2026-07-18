@@ -196,7 +196,6 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       if (!geo || !mapRef.current) return;
       const layer = L.geoJSON(geo, {
         interactive: false,
-        renderer: L.canvas(),
         style: (feature) => {
           const pop = Number((feature?.properties as any)?.habitantes ?? 0);
           return {
