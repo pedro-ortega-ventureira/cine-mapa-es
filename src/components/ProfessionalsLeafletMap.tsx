@@ -158,9 +158,14 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
 
   useEffect(() => {
     if (!mainContainerRef.current || mainMapRef.current) return;
+    // Ensure Leaflet can reinitialize after strict-mode remounts / error resets
+    const container = mainContainerRef.current;
+    container.innerHTML = "";
+    (container as any)._leaflet_id = null;
 
-    const main = L.map(mainContainerRef.current, {
+    const main = L.map(container, {
       minZoom: 4,
+      maxZoom: 18,
       worldCopyJump: false,
       preferCanvas: true,
       attributionControl: false,
@@ -176,7 +181,10 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
 
     let inset: L.Map | null = null;
     if (insetContainerRef.current) {
-      inset = L.map(insetContainerRef.current, {
+      const insetContainer = insetContainerRef.current;
+      insetContainer.innerHTML = "";
+      (insetContainer as any)._leaflet_id = null;
+      inset = L.map(insetContainer, {
         zoomControl: false,
         attributionControl: false,
         preferCanvas: true,
@@ -186,6 +194,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
         boxZoom: false,
         keyboard: false,
         touchZoom: false,
+        maxZoom: 12,
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
