@@ -99,7 +99,7 @@ function Home() {
               <MapPin className="h-3 w-3" /> Municipios menores de 20.000 habitantes
             </div>
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-              Profesionales del audiovisual que hacen medio rural
+              Directorio audiovisual rural
             </h1>
             <p className="mt-3 text-lg text-muted-foreground">
               Un mapa vivo de directoras, directores de fotografía, guionistas, técnicas y
