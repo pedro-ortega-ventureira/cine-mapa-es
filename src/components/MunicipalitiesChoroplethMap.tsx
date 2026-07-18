@@ -192,15 +192,16 @@ export function MunicipalitiesChoroplethMap({
         };
       };
 
-      const bindFeature = (feature: GeoJSON.Feature, lyr: L.Layer) => {
+      const bindFeature = (feature: GeoJSON.Feature, lyr: L.Layer, isInset: boolean) => {
         const props = feature.properties as any;
         const code = props?.codigo_ine as string;
         const name = props?.municipio as string;
         const prov = props?.provincia as string;
         const pop = Number(props?.habitantes ?? 0);
         const ov = overlayMap.get(code);
+        const hasPros = ov && ov.professionals_count > 0;
         const proText =
-          ov && ov.professionals_count > 0
+          hasPros
             ? `<div style="margin-top:4px;color:#2563eb;font-weight:600">${ov.professionals_count} profesional${ov.professionals_count !== 1 ? "es" : ""}${
                 typeof ov.verified_count === "number" && ov.verified_count !== ov.professionals_count
                   ? ` · ${ov.verified_count} verif.`
@@ -225,6 +226,35 @@ export function MunicipalitiesChoroplethMap({
         lyr.on("mouseout", (e) => {
           (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
         });
+
+        // Permanent label on polygons with professionals
+        if (hasPros && lyr instanceof L.Path) {
+          try {
+            const center = lyr.getBounds().getCenter();
+            const labelHtml = `<div style="
+              font-family:system-ui,sans-serif;
+              font-size:${isInset ? 9 : 11}px;
+              font-weight:700;
+              color:#0f172a;
+              text-align:center;
+              line-height:1.2;
+              padding:2px 6px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.82);
+              box-shadow:0 1px 2px rgba(15,23,42,0.15);
+              white-space:nowrap;
+              pointer-events:none;
+            ">${escapeHtml(name)}</div>`;
+            const labelIcon = L.divIcon({
+              className: "municipality-label",
+              html: labelHtml,
+              iconSize: [isInset ? 90 : 110, 22],
+              iconAnchor: [isInset ? 45 : 55, 11],
+            });
+            const labelMarker = L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false });
+            labelMarker.addTo(isInset ? inset : main);
+          } catch {}
+        }
       };
 
       if (mainLayerRef.current) {
