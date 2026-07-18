@@ -191,21 +191,24 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
     mapRef.current = map;
     clusterRef.current = cluster;
 
-    // Perfil de España (comunidades autónomas) como capa de referencia
-    loadSpainGeo().then((geo) => {
+    // Coroplético de municipios <20k como capa base (más intenso = menos habitantes)
+    loadMuniGeo().then((geo) => {
       if (!geo || !mapRef.current) return;
       const layer = L.geoJSON(geo, {
         interactive: false,
-        style: {
-          color: "#334155",
-          weight: 1,
-          opacity: 0.55,
-          fillColor: "#64748b",
-          fillOpacity: 0.08,
+        renderer: L.canvas(),
+        style: (feature) => {
+          const pop = Number((feature?.properties as any)?.habitantes ?? 0);
+          return {
+            color: "#475569",
+            weight: 0.3,
+            opacity: 0.6,
+            fillColor: colorForPopulation(pop),
+            fillOpacity: 0.55,
+          };
         },
       });
       layer.addTo(mapRef.current);
-      // Colócala por debajo de los pines
       layer.bringToBack();
       spainLayerRef.current = layer;
     });
