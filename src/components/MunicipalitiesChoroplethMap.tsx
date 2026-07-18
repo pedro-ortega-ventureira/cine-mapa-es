@@ -124,6 +124,7 @@ export function MunicipalitiesChoroplethMap({
         boxZoom: false,
         keyboard: false,
         touchZoom: false,
+        maxZoom: 12,
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       inset.createPane("pros");
