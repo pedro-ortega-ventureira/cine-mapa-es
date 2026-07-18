@@ -180,7 +180,10 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
 
     let inset: L.Map | null = null;
     if (insetContainerRef.current) {
-      inset = L.map(insetContainerRef.current, {
+      const insetContainer = insetContainerRef.current;
+      insetContainer.innerHTML = "";
+      (insetContainer as any)._leaflet_id = null;
+      inset = L.map(insetContainer, {
         zoomControl: false,
         attributionControl: false,
         preferCanvas: true,
