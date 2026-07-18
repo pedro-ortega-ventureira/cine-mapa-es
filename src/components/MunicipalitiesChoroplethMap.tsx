@@ -113,7 +113,10 @@ export function MunicipalitiesChoroplethMap({
     mainMapRef.current = main;
 
     if (insetContainerRef.current) {
-      const inset = L.map(insetContainerRef.current, {
+      const insetContainer = insetContainerRef.current;
+      insetContainer.innerHTML = "";
+      (insetContainer as any)._leaflet_id = null;
+      const inset = L.map(insetContainer, {
         ...commonOpts,
         dragging: false,
         doubleClickZoom: false,
