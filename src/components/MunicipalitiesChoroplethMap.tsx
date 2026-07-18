@@ -198,7 +198,7 @@ export function MunicipalitiesChoroplethMap({
           { type: "FeatureCollection", features: canariasFeatures } as GeoJSON.FeatureCollection,
           {
             style: styleFn,
-            onEachFeature: (feature, lyr) => bindFeature(insetLayer, feature, lyr),
+            onEachFeature: bindFeature,
           },
         );
         insetLayer.addTo(inset);
