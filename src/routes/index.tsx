@@ -1,11 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MunicipalityMap, type MapPoint } from "@/components/MunicipalityMap";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { colorForRole } from "@/lib/roles";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Users, MapPin, Film } from "lucide-react";
+
+const MunicipalitiesChoroplethMap = lazy(() =>
+  import("@/components/MunicipalitiesChoroplethMap").then((m) => ({
+    default: m.MunicipalitiesChoroplethMap,
+  })),
+);
 
 export const Route = createFileRoute("/")({
   component: Home,
