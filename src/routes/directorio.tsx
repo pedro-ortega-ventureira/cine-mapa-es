@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ProfessionalCard } from "@/components/ProfessionalCard";
 import { AUTONOMOUS_COMMUNITIES, PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
-import { Search, Grid3x3, List } from "lucide-react";
+import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
+import { Search, Grid3x3, List, X } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -31,6 +32,8 @@ export const Route = createFileRoute("/directorio")({
   component: Directorio,
 });
 
+const sel = (s: string): string => s;
+
 function Directorio() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -38,41 +41,115 @@ function Directorio() {
   const [q, setQ] = useState(search.q ?? "");
 
   const municipalitiesQ = useQuery({
-    queryKey: ["municipalities-lite"],
+    queryKey: ["municipalities-lite-v2"],
     queryFn: async () => {
-      const { data } = await supabase.from("municipalities").select("code,name,province");
-      return data ?? [];
+      const { data } = await supabase
+        .from("municipalities")
+        .select("code,name,province,autonomous_community")
+        .limit(20000);
+      return (data ?? []) as Array<{
+        code: string;
+        name: string;
+        province: string;
+        autonomous_community: string | null;
+      }>;
     },
+    staleTime: 5 * 60_000,
   });
+
   const munMap = useMemo(() => {
-    const m = new Map<string, { name: string; province: string }>();
-    for (const r of municipalitiesQ.data ?? []) m.set(r.code, { name: r.name, province: r.province });
+    const m = new Map<string, { name: string; province: string; ccaa: string | null }>();
+    for (const r of municipalitiesQ.data ?? [])
+      m.set(r.code, { name: r.name, province: r.province, ccaa: r.autonomous_community });
     return m;
   }, [municipalitiesQ.data]);
 
+  const munIndex = useMemo(
+    () => buildMunIndex(municipalitiesQ.data ?? []),
+    [municipalitiesQ.data],
+  );
+
+  const parsed = useMemo(
+    () => parseQuery(search.q ?? "", munIndex),
+    [search.q, munIndex],
+  );
+
   const profsQ = useQuery({
-    queryKey: ["professionals", search],
+    enabled: municipalitiesQ.isSuccess || !search.q,
+    queryKey: ["professionals-v2", search, parsed],
     queryFn: async () => {
-      let q = supabase
+      // Combine explicit sidebar filters with inferred filters
+      const effectiveRoles = search.rol ? [search.rol] : parsed.roles;
+      const effectiveCcaa = search.ccaa ? [search.ccaa] : parsed.ccaa;
+      const effectiveProvinces = search.provincia ? [search.provincia] : parsed.provinces;
+
+      // Build municipality code set from location filters
+      let codeSet: Set<string> | null = null;
+      if (effectiveProvinces.length || effectiveCcaa.length || parsed.municipalityCodes.length) {
+        codeSet = new Set<string>();
+        for (const p of effectiveProvinces) {
+          for (const c of munIndex.provinceToCodes.get(normalize(p)) ?? []) codeSet.add(c);
+        }
+        for (const c of effectiveCcaa) {
+          for (const code of munIndex.ccaaToCodes.get(normalize(c)) ?? []) codeSet.add(code);
+        }
+        for (const c of parsed.municipalityCodes) codeSet.add(c);
+      }
+
+      let query = supabase
         .from("professionals")
-        .select("id,slug,full_name,alias,photo_url,primary_role,production_types,municipality_code,secondary_roles,tags")
+        .select(
+          sel(
+            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,tags",
+          ),
+        )
         .eq("verified", true)
         .order("date_joined", { ascending: false })
-        .limit(120);
-      if (search.rol) q = q.eq("primary_role", search.rol);
-      if (search.tipo) q = q.contains("production_types", [search.tipo]);
-      const { data, error } = await q;
+        .limit(500);
+
+      if (effectiveRoles.length === 1) {
+        query = query.eq("primary_role", effectiveRoles[0]);
+      } else if (effectiveRoles.length > 1) {
+        query = query.in("primary_role", effectiveRoles);
+      }
+
+      if (search.tipo) query = query.contains("production_types", [search.tipo]);
+
+      if (codeSet && codeSet.size) {
+        const codes = [...codeSet];
+        // Supabase IN has a practical URL length limit; chunk if huge
+        if (codes.length <= 800) {
+          query = query.in("municipality_code", codes);
+        }
+        // else: fall back to client-side filter below
+      }
+
+      const { data, error } = await query.returns<any[]>();
       if (error) throw error;
       let rows = data ?? [];
-      if (search.q) {
-        const needle = search.q.toLowerCase();
-        rows = rows.filter(
-          (r: any) =>
-            r.full_name.toLowerCase().includes(needle) ||
-            (r.alias ?? "").toLowerCase().includes(needle) ||
-            (r.primary_role ?? "").toLowerCase().includes(needle),
-        );
+
+      // Client-side fallback filter when code set was too large
+      if (codeSet && codeSet.size > 800) {
+        rows = rows.filter((r: any) => r.municipality_code && codeSet!.has(r.municipality_code));
       }
+
+      // Free-text refinement across name, alias, tags
+      if (parsed.freeText) {
+        const tokens = parsed.freeText.split(/\s+/).filter(Boolean);
+        rows = rows.filter((r: any) => {
+          const hay = normalize(
+            [
+              r.full_name ?? "",
+              r.alias ?? "",
+              r.primary_role ?? "",
+              (r.secondary_roles ?? []).join(" "),
+              (r.tags ?? []).join(" "),
+            ].join(" "),
+          );
+          return tokens.every((t) => hay.includes(t));
+        });
+      }
+
       return rows;
     },
   });
@@ -80,17 +157,21 @@ function Directorio() {
   const enriched = (profsQ.data ?? []).map((p: any) => ({
     ...p,
     municipality: p.municipality_code ? munMap.get(p.municipality_code) ?? null : null,
-  })).filter((p: any) => {
-    if (search.ccaa && p.municipality_code) {
-      const m = munMap.get(p.municipality_code);
-      // needs autonomous_community lookup — for simplicity just filter by province if ccaa passed as province
-      void m;
-    }
-    if (search.provincia && p.municipality) {
-      return p.municipality.province === search.provincia;
-    }
-    return true;
-  });
+  }));
+
+  const removeToken = (token: string) => {
+    const cur = search.q ?? "";
+    const re = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    const next = cur.replace(re, "").replace(/\s+/g, " ").trim();
+    setQ(next);
+    navigate({ search: { ...search, q: next || undefined } });
+  };
+
+  const chips: Array<{ label: string; token: string }> = [
+    ...parsed.roles.map((r) => ({ label: `Rol: ${r}`, token: r })),
+    ...parsed.provinces.map((p) => ({ label: `Provincia: ${p}`, token: p })),
+    ...parsed.ccaa.map((c) => ({ label: `CCAA: ${c}`, token: c })),
+  ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -109,10 +190,24 @@ function Directorio() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar…"
+                placeholder="Buscar por nombre, rol, provincia…"
                 className="pl-9"
               />
             </form>
+            {chips.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {chips.map((c) => (
+                  <button
+                    key={c.label}
+                    onClick={() => removeToken(c.token)}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] hover:bg-secondary/70"
+                  >
+                    {c.label}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <FilterSelect
