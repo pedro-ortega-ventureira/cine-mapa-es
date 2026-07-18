@@ -89,8 +89,32 @@ export function MunicipalityContourMap({
             fillOpacity: 0.15,
           },
         }).addTo(map);
+
+        const props = feature.properties as any;
+        const labelName = municipalityName || props?.municipio || "Municipio";
         try {
-          map.fitBounds(layer.getBounds(), { padding: [16, 16] });
+          const center = layer.getBounds().getCenter();
+          const labelIcon = L.divIcon({
+            className: "municipality-label",
+            html: `<div class="municipality-label-inner" style="
+              font-family:system-ui,sans-serif;
+              font-size:13px;
+              font-weight:700;
+              color:#0f172a;
+              text-align:center;
+              line-height:1.2;
+              padding:4px 8px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.85);
+              box-shadow:0 1px 3px rgba(15,23,42,0.18);
+              white-space:nowrap;
+              pointer-events:none;
+            ">${escapeHtml(labelName)}</div>`,
+            iconSize: [120, 28],
+            iconAnchor: [60, 14],
+          });
+          L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
+          map.fitBounds(layer.getBounds(), { padding: [28, 28], maxZoom: 13 });
         } catch {}
       } else if (lat != null && lng != null) {
         map.setView([lat, lng], 11);
