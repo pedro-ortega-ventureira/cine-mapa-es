@@ -318,8 +318,11 @@ export function MunicipalitiesChoroplethMap({
         );
         marker.addTo(target);
       } else {
+        const isInset = target === insetGroup;
         const count = list.length;
-        const size = Math.min(34, 22 + Math.round(Math.log2(count) * 4));
+        const size = isInset
+          ? Math.min(36, 26 + Math.round(Math.log2(count) * 4))
+          : Math.min(48, 34 + Math.round(Math.log2(count) * 5));
         const cp = key.startsWith("cp:") ? key.slice(3) : "";
         const municipality = first.geo_municipality_name ?? "";
         const province = first.geo_province ?? "";
@@ -339,7 +342,7 @@ export function MunicipalitiesChoroplethMap({
             background:#0f172a;color:#fff;
             display:flex;align-items:center;justify-content:center;
             font:600 12px/1 system-ui;
-            box-shadow:0 0 0 3px rgba(255,255,255,0.85), 0 0 0 5px rgba(15,23,42,0.15);
+            box-shadow:0 0 0 4px rgba(255,255,255,0.9), 0 0 0 7px rgba(15,23,42,0.12);
           ">${count}</div>`;
         const icon = L.divIcon({
           html,
