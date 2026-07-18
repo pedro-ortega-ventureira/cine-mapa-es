@@ -148,29 +148,20 @@ function Home() {
           </label>
 
         </div>
-        {municipalitiesQ.isLoading ? (
-          <div className="aspect-[5/4] rounded-lg bg-muted animate-pulse" />
-        ) : points.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            La base de datos de municipios aún no está cargada.{" "}
-            <a
-              href="/api/public/seed-municipalities"
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary underline"
-            >
-              Cargar dataset ahora
-            </a>
-            .
-          </div>
+        {!mounted ? (
+          <div className="rounded-lg bg-muted animate-pulse" style={{ height: 480 }} />
         ) : (
-          <MunicipalityMap
-            points={points}
-            onlyWithProfessionals={onlyWithPros}
-            onSelectMunicipality={(code) => {
-              window.location.href = `/municipios/${code}`;
-            }}
-          />
+          <Suspense
+            fallback={<div className="rounded-lg bg-muted animate-pulse" style={{ height: 480 }} />}
+          >
+            <MunicipalitiesChoroplethMap
+              overlays={overlays}
+              onlyWithProfessionals={onlyWithPros}
+              onSelectMunicipality={(code: string) => {
+                window.location.href = `/municipios/${code}`;
+              }}
+            />
+          </Suspense>
         )}
       </section>
 
