@@ -105,6 +105,7 @@ export function MunicipalitiesChoroplethMap({
       ...commonOpts,
       zoomControl: true,
       minZoom: 4,
+      maxZoom: 18,
     });
     main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [8, 8] });
     main.createPane("pros");
