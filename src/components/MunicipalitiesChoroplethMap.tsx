@@ -177,7 +177,6 @@ export function MunicipalitiesChoroplethMap({
           (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
         });
       };
-...
       const mainLayer = L.geoJSON(
         { type: "FeatureCollection", features: peninsulaFeatures } as GeoJSON.FeatureCollection,
         {
