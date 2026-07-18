@@ -1,13 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ProfessionalCard } from "@/components/ProfessionalCard";
 import { AUTONOMOUS_COMMUNITIES, PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
-import { Search, Grid3x3, List, X } from "lucide-react";
+import { Search, Grid3x3, List, X, Map as MapIcon, ChevronUp } from "lucide-react";
+import type { MapProfessional } from "@/components/ProfessionalsLeafletMap";
 import { z } from "zod";
+
+const ProfessionalsLeafletMap = lazy(() =>
+  import("@/components/ProfessionalsLeafletMap").then((m) => ({ default: m.ProfessionalsLeafletMap })),
+);
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -39,6 +44,7 @@ function Directorio() {
   const navigate = Route.useNavigate();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState(search.q ?? "");
+  const [mapOpen, setMapOpen] = useState(true);
 
   const municipalitiesQ = useQuery({
     queryKey: ["municipalities-lite-v2"],
@@ -69,23 +75,19 @@ function Directorio() {
     [municipalitiesQ.data],
   );
 
-  const parsed = useMemo(
-    () => parseQuery(search.q ?? "", munIndex),
-    [search.q, munIndex],
-  );
+  const parsed = useMemo(() => parseQuery(search.q ?? "", munIndex), [search.q, munIndex]);
 
   const profsQ = useQuery({
-    enabled: municipalitiesQ.isSuccess || !search.q,
-    queryKey: ["professionals-v2", search, parsed],
+    queryKey: ["professionals-v3", search, parsed],
     queryFn: async () => {
-      // Combine explicit sidebar filters with inferred filters
-      const effectiveRoles = search.rol ? [search.rol] : parsed.roles;
-      const effectiveCcaa = search.ccaa ? [search.ccaa] : parsed.ccaa;
-      const effectiveProvinces = search.provincia ? [search.provincia] : parsed.provinces;
+      const effectiveRoles = search.rol ? [search.rol] : parsed.roles.map((r) => r.canonical);
+      const effectiveCcaa = search.ccaa ? [search.ccaa] : parsed.ccaa.map((c) => c.display);
+      const effectiveProvinces = search.provincia
+        ? [search.provincia]
+        : parsed.provinces.map((p) => p.display);
 
-      // Build municipality code set from location filters
       let codeSet: Set<string> | null = null;
-      if (effectiveProvinces.length || effectiveCcaa.length || parsed.municipalityCodes.length) {
+      if (effectiveProvinces.length || effectiveCcaa.length || parsed.municipalities.length) {
         codeSet = new Set<string>();
         for (const p of effectiveProvinces) {
           for (const c of munIndex.provinceToCodes.get(normalize(p)) ?? []) codeSet.add(c);
@@ -93,14 +95,14 @@ function Directorio() {
         for (const c of effectiveCcaa) {
           for (const code of munIndex.ccaaToCodes.get(normalize(c)) ?? []) codeSet.add(code);
         }
-        for (const c of parsed.municipalityCodes) codeSet.add(c);
+        for (const m of parsed.municipalities) codeSet.add(m.code);
       }
 
       let query = supabase
         .from("professionals")
         .select(
           sel(
-            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,tags",
+            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,tags,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
           ),
         )
         .eq("verified", true)
@@ -110,9 +112,7 @@ function Directorio() {
       if (effectiveRoles.length === 1) {
         query = query.ilike("primary_role", `%${effectiveRoles[0]}%`);
       } else if (effectiveRoles.length > 1) {
-        const orExpr = effectiveRoles
-          .map((r) => `primary_role.ilike.%${r}%`)
-          .join(",");
+        const orExpr = effectiveRoles.map((r) => `primary_role.ilike.%${r}%`).join(",");
         query = query.or(orExpr);
       }
 
@@ -120,23 +120,19 @@ function Directorio() {
 
       if (codeSet && codeSet.size) {
         const codes = [...codeSet];
-        // Supabase IN has a practical URL length limit; chunk if huge
         if (codes.length <= 800) {
           query = query.in("municipality_code", codes);
         }
-        // else: fall back to client-side filter below
       }
 
       const { data, error } = await query.returns<any[]>();
       if (error) throw error;
       let rows = data ?? [];
 
-      // Client-side fallback filter when code set was too large
       if (codeSet && codeSet.size > 800) {
         rows = rows.filter((r: any) => r.municipality_code && codeSet!.has(r.municipality_code));
       }
 
-      // Free-text refinement across name, alias, tags
       if (parsed.freeText) {
         const tokens = parsed.freeText.split(/\s+/).filter(Boolean);
         rows = rows.filter((r: any) => {
@@ -162,19 +158,51 @@ function Directorio() {
     municipality: p.municipality_code ? munMap.get(p.municipality_code) ?? null : null,
   }));
 
-  const removeToken = (token: string) => {
+  const mapProfessionals: MapProfessional[] = useMemo(
+    () =>
+      enriched
+        .filter(
+          (p: any) =>
+            typeof p.geo_lat === "number" &&
+            typeof p.geo_lng === "number" &&
+            !Number.isNaN(p.geo_lat) &&
+            !Number.isNaN(p.geo_lng),
+        )
+        .map((p: any) => ({
+          id: p.id,
+          slug: p.slug,
+          full_name: p.full_name,
+          alias: p.alias,
+          photo_url: p.photo_url,
+          primary_role: p.primary_role,
+          verified: !!p.verified,
+          geo_lat: p.geo_lat,
+          geo_lng: p.geo_lng,
+          geo_accuracy: (p.geo_accuracy === "province" ? "province" : "exact") as
+            | "exact"
+            | "province",
+          geo_municipality_name: p.geo_municipality_name ?? p.municipality?.name ?? null,
+          geo_province: p.geo_province ?? p.municipality?.province ?? null,
+        })),
+    [enriched],
+  );
+
+  const removeToken = (phrase: string) => {
     const cur = search.q ?? "";
-    const re = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
     const next = cur.replace(re, "").replace(/\s+/g, " ").trim();
     setQ(next);
     navigate({ search: { ...search, q: next || undefined } });
   };
 
-  const chips: Array<{ label: string; token: string }> = [
-    ...parsed.roles.map((r) => ({ label: `Rol: ${r}`, token: r })),
-    ...parsed.provinces.map((p) => ({ label: `Provincia: ${p}`, token: p })),
-    ...parsed.ccaa.map((c) => ({ label: `CCAA: ${c}`, token: c })),
+  const chips: Array<{ label: string; phrase: string }> = [
+    ...parsed.roles.map((r) => ({ label: `Rol: ${r.canonical}`, phrase: r.phrase })),
+    ...parsed.provinces.map((p) => ({ label: `Provincia: ${p.display}`, phrase: p.phrase })),
+    ...parsed.ccaa.map((c) => ({ label: `CCAA: ${c.display}`, phrase: c.phrase })),
   ];
+
+  const hasAnyFilter =
+    !!search.q || !!search.ccaa || !!search.rol || !!search.tipo || !!search.provincia;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -202,7 +230,7 @@ function Directorio() {
                 {chips.map((c) => (
                   <button
                     key={c.label}
-                    onClick={() => removeToken(c.token)}
+                    onClick={() => removeToken(c.phrase)}
                     className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] hover:bg-secondary/70"
                   >
                     {c.label}
@@ -232,7 +260,7 @@ function Directorio() {
             onChange={(v) => navigate({ search: { ...search, tipo: v || undefined } })}
           />
 
-          {(search.q || search.ccaa || search.rol || search.tipo || search.provincia) && (
+          {hasAnyFilter && (
             <Link
               to="/directorio"
               search={{}}
@@ -246,30 +274,60 @@ function Directorio() {
 
         {/* Results */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2">
             <h1 className="text-2xl font-semibold">
               Directorio
               <span className="ml-2 text-sm text-muted-foreground font-normal">
                 {enriched.length} resultado{enriched.length !== 1 ? "s" : ""}
               </span>
             </h1>
-            <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setView("grid")}
-                aria-label="Vista de tarjetas"
-                className={`p-1.5 rounded ${view === "grid" ? "bg-secondary" : ""}`}
+                onClick={() => setMapOpen((v) => !v)}
+                className="inline-flex items-center gap-1 text-xs border rounded-md px-2 py-1 hover:bg-accent"
+                aria-expanded={mapOpen}
               >
-                <Grid3x3 className="h-4 w-4" />
+                {mapOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <MapIcon className="h-3.5 w-3.5" />}
+                {mapOpen ? "Ocultar mapa" : "Mostrar mapa"}
               </button>
-              <button
-                onClick={() => setView("list")}
-                aria-label="Vista de lista"
-                className={`p-1.5 rounded ${view === "list" ? "bg-secondary" : ""}`}
-              >
-                <List className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1 border rounded-md p-0.5">
+                <button
+                  onClick={() => setView("grid")}
+                  aria-label="Vista de tarjetas"
+                  className={`p-1.5 rounded ${view === "grid" ? "bg-secondary" : ""}`}
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setView("list")}
+                  aria-label="Vista de lista"
+                  className={`p-1.5 rounded ${view === "list" ? "bg-secondary" : ""}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
+
+          {mapOpen && (
+            <div className="mb-6">
+              <Suspense
+                fallback={
+                  <div
+                    className="w-full rounded-lg border bg-muted animate-pulse"
+                    style={{ height: "min(50vh, 460px)", minHeight: 320 }}
+                  />
+                }
+              >
+                <ProfessionalsLeafletMap professionals={mapProfessionals} />
+              </Suspense>
+              {mapProfessionals.length === 0 && !profsQ.isLoading && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Ningún profesional con localización coincide con los filtros.
+                </p>
+              )}
+            </div>
+          )}
 
           {profsQ.isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
