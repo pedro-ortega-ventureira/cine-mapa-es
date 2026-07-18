@@ -50,10 +50,9 @@ function Home() {
     queryFn: async () => {
       const [pros, muni] = await Promise.all([
         supabase.from("professionals").select("*", { count: "exact", head: true }).eq("verified", true),
-        supabase.from("professionals").select("municipality_code").eq("verified", true).not("municipality_code", "is", null),
+        supabase.from("municipalities").select("*", { count: "exact", head: true }).lt("population", 20000),
       ]);
-      const distinctMuni = new Set((muni.data ?? []).map((r: any) => r.municipality_code));
-      return { professionals: pros.count ?? 0, municipalities: distinctMuni.size };
+      return { professionals: pros.count ?? 0, municipalities: muni.count ?? 0 };
     },
   });
 
