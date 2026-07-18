@@ -192,15 +192,16 @@ export function MunicipalitiesChoroplethMap({
         };
       };
 
-      const bindFeature = (feature: GeoJSON.Feature, lyr: L.Layer) => {
+      const createBindFeature = (targetMap: L.Map, isInset: boolean) => (feature: GeoJSON.Feature, lyr: L.Layer) => {
         const props = feature.properties as any;
         const code = props?.codigo_ine as string;
         const name = props?.municipio as string;
         const prov = props?.provincia as string;
         const pop = Number(props?.habitantes ?? 0);
         const ov = overlayMap.get(code);
+        const hasPros = ov && ov.professionals_count > 0;
         const proText =
-          ov && ov.professionals_count > 0
+          hasPros
             ? `<div style="margin-top:4px;color:#2563eb;font-weight:600">${ov.professionals_count} profesional${ov.professionals_count !== 1 ? "es" : ""}${
                 typeof ov.verified_count === "number" && ov.verified_count !== ov.professionals_count
                   ? ` · ${ov.verified_count} verif.`
@@ -225,6 +226,37 @@ export function MunicipalitiesChoroplethMap({
         lyr.on("mouseout", (e) => {
           (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
         });
+
+        // Permanent label on polygons with professionals
+        if (hasPros) {
+          try {
+            const bounds = (lyr as any).getBounds?.();
+            if (!bounds) return;
+            const center = bounds.getCenter();
+            const labelHtml = `<div style="
+              font-family:system-ui,sans-serif;
+              font-size:${isInset ? 9 : 11}px;
+              font-weight:700;
+              color:#0f172a;
+              text-align:center;
+              line-height:1.2;
+              padding:2px 6px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.82);
+              box-shadow:0 1px 2px rgba(15,23,42,0.15);
+              white-space:nowrap;
+              pointer-events:none;
+            ">${escapeHtml(name)}</div>`;
+            const labelIcon = L.divIcon({
+              className: "municipality-label",
+              html: labelHtml,
+              iconSize: [isInset ? 90 : 110, 22],
+              iconAnchor: [isInset ? 45 : 55, 11],
+            });
+            const labelMarker = L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false });
+            labelMarker.addTo(targetMap);
+          } catch {}
+        }
       };
 
       if (mainLayerRef.current) {
@@ -235,7 +267,7 @@ export function MunicipalitiesChoroplethMap({
         { type: "FeatureCollection", features: peninsulaFeatures } as GeoJSON.FeatureCollection,
         {
           style: styleFn,
-          onEachFeature: bindFeature,
+          onEachFeature: createBindFeature(main, false),
         },
       );
       mainLayer.addTo(main);
@@ -252,7 +284,7 @@ export function MunicipalitiesChoroplethMap({
           { type: "FeatureCollection", features: canariasFeatures } as GeoJSON.FeatureCollection,
           {
             style: styleFn,
-            onEachFeature: bindFeature,
+            onEachFeature: createBindFeature(inset, true),
           },
         );
         insetLayer.addTo(inset);
@@ -309,10 +341,12 @@ export function MunicipalitiesChoroplethMap({
       const lng = first.geo_lng!;
       const target = isCanariasPoint(first) ? insetGroup : mainGroup;
       if (!target) continue;
+      const isInset = target === insetGroup;
+      const municipalityLabel = first.geo_municipality_name ?? "";
+      let markerCenter: L.LatLng | null = null;
 
       if (list.length === 1) {
         const p = first;
-        const isInset = target === insetGroup;
         const color = colorForRole(p.primary_role);
         const marker = L.circleMarker([lat, lng], {
           pane: "pros",
@@ -334,8 +368,8 @@ export function MunicipalitiesChoroplethMap({
           </div>`,
         );
         marker.addTo(target);
+        markerCenter = L.latLng(lat, lng);
       } else {
-        const isInset = target === insetGroup;
         const count = list.length;
         const size = isInset
           ? Math.min(36, 26 + Math.round(Math.log2(count) * 4))
@@ -375,6 +409,34 @@ export function MunicipalitiesChoroplethMap({
           </div>`,
         );
         marker.addTo(target);
+        markerCenter = L.latLng(lat, lng);
+      }
+
+      // Optional label above the point/cluster with municipality name
+      if (municipalityLabel && markerCenter) {
+        try {
+          const labelHtml = `<div style="
+            font-family:system-ui,sans-serif;
+            font-size:${isInset ? 8 : 10}px;
+            font-weight:700;
+            color:#0f172a;
+            text-align:center;
+            line-height:1.2;
+            padding:2px 5px;
+            border-radius:999px;
+            background:rgba(255,255,255,0.92);
+            box-shadow:0 1px 2px rgba(15,23,42,0.15);
+            white-space:nowrap;
+            pointer-events:none;
+          ">${escapeHtml(municipalityLabel)}</div>`;
+          const labelIcon = L.divIcon({
+            className: "municipality-label",
+            html: labelHtml,
+            iconSize: [isInset ? 80 : 100, 18],
+            iconAnchor: [isInset ? 40 : 50, 18 + (isInset ? 10 : 12)],
+          });
+          L.marker(markerCenter, { icon: labelIcon, zIndexOffset: 1000, interactive: false }).addTo(target);
+        } catch {}
       }
     }
   }, [professionals]);
