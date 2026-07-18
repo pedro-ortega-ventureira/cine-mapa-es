@@ -64,17 +64,23 @@ export const AUTONOMOUS_COMMUNITIES = [
   "Melilla",
 ] as const;
 
+// Escala secuencial: menos habitantes = color más intenso
 export const POPULATION_BUCKETS = [
-  { max: 500, label: "< 500", color: "#e2e8f0" },
-  { max: 2000, label: "500 – 2.000", color: "#93c5fd" },
+  { max: 500, label: "< 500", color: "#0c1e6b" },
+  { max: 2000, label: "500 – 2.000", color: "#1d4ed8" },
   { max: 5000, label: "2.000 – 5.000", color: "#3b82f6" },
-  { max: 10000, label: "5.000 – 10.000", color: "#1d4ed8" },
-  { max: 20000, label: "10.000 – 20.000", color: "#1e3a8a" },
+  { max: 10000, label: "5.000 – 10.000", color: "#93c5fd" },
+  { max: 20000, label: "10.000 – 20.000", color: "#dbeafe" },
 ] as const;
 
 export function bucketFor(pop: number) {
   for (const b of POPULATION_BUCKETS) if (pop < b.max) return b;
   return POPULATION_BUCKETS[POPULATION_BUCKETS.length - 1];
+}
+
+export function colorForPopulation(pop: number | null | undefined): string {
+  if (pop == null) return "#e5e7eb";
+  return bucketFor(pop).color;
 }
 
 export function slugify(s: string): string {
