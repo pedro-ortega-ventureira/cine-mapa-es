@@ -18,11 +18,9 @@ export type MapProfessional = {
   geo_province: string | null;
 };
 
-// -------- Icon cache: one divIcon per (photo|initials+hue) --------
+// -------- Icon cache --------
 const iconCache = new Map<string, L.DivIcon>();
 
-
-// Paleta por profesión. Mismos colores que se muestran en la leyenda.
 export const ROLE_COLORS: Record<string, string> = {
   "Dirección": "#ef4444",
   "Guion": "#f97316",
@@ -43,16 +41,13 @@ const ROLE_DEFAULT = "#64748b";
 function colorForRole(role: string | null): string {
   if (!role) return ROLE_DEFAULT;
   if (ROLE_COLORS[role]) return ROLE_COLORS[role];
-  // fallback: hash → hue estable
   let h = 0;
   for (let i = 0; i < role.length; i++) h = (h * 31 + role.charCodeAt(i)) | 0;
   return `hsl(${Math.abs(h) % 360} 65% 50%)`;
 }
 
 function exactIconFor(p: MapProfessional): L.DivIcon {
-  const key = p.photo_url
-    ? `p:${p.photo_url}`
-    : `d:${p.primary_role ?? "_"}:${p.verified ? 1 : 0}`;
+  const key = p.photo_url ? `p:${p.photo_url}` : `d:${p.primary_role ?? "_"}:${p.verified ? 1 : 0}`;
   const hit = iconCache.get(key);
   if (hit) return hit;
 
@@ -70,7 +65,6 @@ function exactIconFor(p: MapProfessional): L.DivIcon {
       </div>
     `;
   } else {
-    // Sin foto → punto pequeño coloreado por profesión
     size = 16;
     const color = colorForRole(p.primary_role);
     html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`;
@@ -102,12 +96,8 @@ function popupHtml(p: MapProfessional) {
   const verified = p.verified
     ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:#dcfce7;color:#166534;font-size:11px;margin-left:4px">verificado</span>`
     : "";
-  const approx =
-    p.geo_accuracy === "province"
-      ? ` <span style="color:#a16207">(aprox.)</span>`
-      : "";
-  const loc =
-    [p.geo_municipality_name, p.geo_province].filter(Boolean).join(" / ") || "—";
+  const approx = p.geo_accuracy === "province" ? ` <span style="color:#a16207">(aprox.)</span>` : "";
+  const loc = [p.geo_municipality_name, p.geo_province].filter(Boolean).join(" / ") || "—";
   return `
     <div style="min-width:220px;font-family:system-ui,sans-serif;line-height:1.35">
       ${photo}
@@ -127,17 +117,13 @@ function popupHtml(p: MapProfessional) {
 }
 
 function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]!));
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 function escapeAttr(s: string) {
-  return s.replace(/["'<>&]/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]!));
+  return s.replace(/["'<>&]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
-// -------- Municipios GeoJSON (choropleth base layer) --------
+// -------- Municipios GeoJSON --------
 const MUNI_GEOJSON_URL = "/geo/municipios-lt20k.geojson";
 let muniGeoPromise: Promise<GeoJSON.FeatureCollection | null> | null = null;
 function loadMuniGeo(): Promise<GeoJSON.FeatureCollection | null> {
@@ -148,113 +134,153 @@ function loadMuniGeo(): Promise<GeoJSON.FeatureCollection | null> {
   return muniGeoPromise;
 }
 
-type Props = {
-  professionals: MapProfessional[];
-};
+function isCanariasFeature(feature: GeoJSON.Feature): boolean {
+  const prov = String((feature.properties as any)?.provincia ?? "").toLowerCase();
+  return prov.includes("palmas") || prov.includes("tenerife");
+}
+
+const PENINSULA_BOUNDS = L.latLngBounds(L.latLng(35.8, -9.8), L.latLng(44.0, 4.6));
+const CANARIAS_BOUNDS = L.latLngBounds(L.latLng(27.4, -18.4), L.latLng(29.5, -13.3));
+
+function isInCanarias(lat: number, lng: number) {
+  return lat >= 27.4 && lat <= 29.5 && lng >= -18.5 && lng <= -13.3;
+}
+
+type Props = { professionals: MapProfessional[] };
 
 export function ProfessionalsLeafletMap({ professionals }: Props) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
-  const spainLayerRef = useRef<L.GeoJSON | null>(null);
+  const mainContainerRef = useRef<HTMLDivElement | null>(null);
+  const insetContainerRef = useRef<HTMLDivElement | null>(null);
+  const mainMapRef = useRef<L.Map | null>(null);
+  const insetMapRef = useRef<L.Map | null>(null);
+  const mainClusterRef = useRef<L.MarkerClusterGroup | null>(null);
+  const insetClusterRef = useRef<L.MarkerClusterGroup | null>(null);
 
-  // init once
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, {
-      center: [39.5, -3.7], // ligeramente al sur para encuadrar Canarias
-      zoom: 5,
+    if (!mainContainerRef.current || mainMapRef.current) return;
+
+    const main = L.map(mainContainerRef.current, {
       minZoom: 4,
       worldCopyJump: false,
       preferCanvas: true,
+      attributionControl: false,
+      scrollWheelZoom: false,
     });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+    main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [10, 10] });
 
-    // Encuadre inicial para ver Península + Baleares + Canarias
-    map.fitBounds(
-      L.latLngBounds(L.latLng(27.5, -18.5), L.latLng(44.0, 4.5)),
-      { animate: false, padding: [10, 10] },
-    );
+    const mainCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
+      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 45 });
+    main.addLayer(mainCluster);
+    mainMapRef.current = main;
+    mainClusterRef.current = mainCluster;
 
-    const cluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-      .markerClusterGroup({
-        showCoverageOnHover: false,
-        spiderfyOnMaxZoom: true,
-        maxClusterRadius: 45,
+    let inset: L.Map | null = null;
+    if (insetContainerRef.current) {
+      inset = L.map(insetContainerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        preferCanvas: true,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        touchZoom: false,
       });
-    map.addLayer(cluster);
+      inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
+      const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
+        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 30 });
+      inset.addLayer(insetCluster);
+      insetMapRef.current = inset;
+      insetClusterRef.current = insetCluster;
+    }
 
-    mapRef.current = map;
-    clusterRef.current = cluster;
-
-    // Coroplético de municipios <20k como capa base (más intenso = menos habitantes)
     loadMuniGeo().then((geo) => {
-      if (!geo || !mapRef.current) return;
-      const layer = L.geoJSON(geo, {
-        interactive: false,
-        style: (feature) => {
-          const pop = Number((feature?.properties as any)?.habitantes ?? 0);
-          return {
-            color: "#475569",
-            weight: 0.3,
-            opacity: 0.6,
-            fillColor: colorForPopulation(pop),
-            fillOpacity: 0.55,
-          };
-        },
-      });
-      layer.addTo(mapRef.current);
-      layer.bringToBack();
-      spainLayerRef.current = layer;
+      if (!geo) return;
+      const peninsula: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: geo.features.filter((f) => !isCanariasFeature(f)),
+      };
+      const canarias: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: geo.features.filter((f) => isCanariasFeature(f)),
+      };
+      const styleFn: L.StyleFunction = (feature) => {
+        const pop = Number((feature?.properties as any)?.habitantes ?? 0);
+        return {
+          color: "#475569",
+          weight: 0.3,
+          opacity: 0.7,
+          fillColor: colorForPopulation(pop),
+          fillOpacity: 0.7,
+        };
+      };
+      if (mainMapRef.current) {
+        L.geoJSON(peninsula, { interactive: false, style: styleFn }).addTo(mainMapRef.current).bringToBack();
+      }
+      if (insetMapRef.current) {
+        L.geoJSON(canarias, { interactive: false, style: styleFn }).addTo(insetMapRef.current).bringToBack();
+      }
     });
 
-    const ro = new ResizeObserver(() => map.invalidateSize());
-    ro.observe(containerRef.current);
+    const ro = new ResizeObserver(() => {
+      main.invalidateSize();
+      insetMapRef.current?.invalidateSize();
+    });
+    ro.observe(mainContainerRef.current);
 
     return () => {
       ro.disconnect();
-      map.remove();
-      mapRef.current = null;
-      clusterRef.current = null;
-      spainLayerRef.current = null;
+      main.remove();
+      insetMapRef.current?.remove();
+      mainMapRef.current = null;
+      insetMapRef.current = null;
+      mainClusterRef.current = null;
+      insetClusterRef.current = null;
     };
   }, []);
 
-  // update markers when data changes
-  const key = useMemo(
-    () => professionals.map((p) => p.id).join("|"),
-    [professionals],
-  );
+  const key = useMemo(() => professionals.map((p) => p.id).join("|"), [professionals]);
   useEffect(() => {
-    const cluster = clusterRef.current;
-    if (!cluster) return;
-    cluster.clearLayers();
-    const markers: L.Marker[] = [];
+    const mainCluster = mainClusterRef.current;
+    const insetCluster = insetClusterRef.current;
+    if (!mainCluster) return;
+    mainCluster.clearLayers();
+    insetCluster?.clearLayers();
+    const mainMarkers: L.Marker[] = [];
+    const insetMarkers: L.Marker[] = [];
     for (const p of professionals) {
       const m = L.marker([p.geo_lat, p.geo_lng], {
         icon: p.geo_accuracy === "exact" ? exactIconFor(p) : approxIcon,
         title: p.full_name,
       });
       m.bindPopup(popupHtml(p));
-      markers.push(m);
+      if (isInCanarias(p.geo_lat, p.geo_lng)) insetMarkers.push(m);
+      else mainMarkers.push(m);
     }
-    cluster.addLayers(markers);
-    // No re-encuadramos al cambiar el filtro para no desorientar al usuario;
-    // mantenemos la vista nacional inicial.
+    mainCluster.addLayers(mainMarkers);
+    insetCluster?.addLayers(insetMarkers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return (
     <div
-      ref={containerRef}
-      className="w-full rounded-lg border overflow-hidden"
+      className="relative w-full rounded-lg border overflow-hidden bg-slate-50"
       style={{ height: "min(72vh, 680px)", minHeight: 420 }}
       role="region"
       aria-label="Mapa de profesionales verificados en España"
-    />
+    >
+      <div ref={mainContainerRef} className="absolute inset-0" style={{ background: "#f8fafc" }} />
+      <div
+        className="absolute bottom-2 left-2 rounded-md border-2 border-slate-300 bg-white shadow-md overflow-hidden"
+        style={{ width: 200, height: 120 }}
+        aria-label="Islas Canarias"
+      >
+        <div ref={insetContainerRef} className="absolute inset-0" style={{ background: "#f8fafc" }} />
+        <div className="pointer-events-none absolute top-1 left-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 px-1 rounded z-[500]">
+          Canarias
+        </div>
+      </div>
+    </div>
   );
 }
