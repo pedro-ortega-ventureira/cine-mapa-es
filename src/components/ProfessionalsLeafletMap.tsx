@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
+import { colorForPopulation } from "@/lib/constants";
 
 export type MapProfessional = {
   id: string;
