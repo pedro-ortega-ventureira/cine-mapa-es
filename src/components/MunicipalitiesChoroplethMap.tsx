@@ -192,7 +192,7 @@ export function MunicipalitiesChoroplethMap({
         };
       };
 
-      const bindFeature = (feature: GeoJSON.Feature, lyr: L.Layer, isInset: boolean) => {
+      const createBindFeature = (targetMap: L.Map, isInset: boolean) => (feature: GeoJSON.Feature, lyr: L.Layer) => {
         const props = feature.properties as any;
         const code = props?.codigo_ine as string;
         const name = props?.municipio as string;
@@ -228,9 +228,11 @@ export function MunicipalitiesChoroplethMap({
         });
 
         // Permanent label on polygons with professionals
-        if (hasPros && lyr instanceof L.Path) {
+        if (hasPros) {
           try {
-            const center = lyr.getBounds().getCenter();
+            const bounds = (lyr as any).getBounds?.();
+            if (!bounds) return;
+            const center = bounds.getCenter();
             const labelHtml = `<div style="
               font-family:system-ui,sans-serif;
               font-size:${isInset ? 9 : 11}px;
@@ -252,7 +254,7 @@ export function MunicipalitiesChoroplethMap({
               iconAnchor: [isInset ? 45 : 55, 11],
             });
             const labelMarker = L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false });
-            labelMarker.addTo(isInset ? inset : main);
+            labelMarker.addTo(targetMap);
           } catch {}
         }
       };
@@ -265,7 +267,7 @@ export function MunicipalitiesChoroplethMap({
         { type: "FeatureCollection", features: peninsulaFeatures } as GeoJSON.FeatureCollection,
         {
           style: styleFn,
-          onEachFeature: bindFeature,
+          onEachFeature: createBindFeature(main, false),
         },
       );
       mainLayer.addTo(main);
@@ -282,7 +284,7 @@ export function MunicipalitiesChoroplethMap({
           { type: "FeatureCollection", features: canariasFeatures } as GeoJSON.FeatureCollection,
           {
             style: styleFn,
-            onEachFeature: bindFeature,
+            onEachFeature: createBindFeature(inset, true),
           },
         );
         insetLayer.addTo(inset);
