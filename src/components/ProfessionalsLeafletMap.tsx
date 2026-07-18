@@ -158,8 +158,12 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
 
   useEffect(() => {
     if (!mainContainerRef.current || mainMapRef.current) return;
+    // Ensure Leaflet can reinitialize after strict-mode remounts / error resets
+    const container = mainContainerRef.current;
+    container.innerHTML = "";
+    (container as any)._leaflet_id = null;
 
-    const main = L.map(mainContainerRef.current, {
+    const main = L.map(container, {
       minZoom: 4,
       worldCopyJump: false,
       preferCanvas: true,
