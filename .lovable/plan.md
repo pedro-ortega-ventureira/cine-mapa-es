@@ -1,7 +1,10 @@
-Modificaremos la página de perfil público del profesional (`src/routes/profesionales.$slug.tsx`) para:
+## Cambios en `src/components/MunicipalityContourMap.tsx`
 
-1. **Mostrar código postal + municipio + provincia** en una única línea de ubicación, usando `raw_postal_code` (disponible en la tabla) y los datos de `municipalities`. El formato será: `CP XXXXX — Municipio, Provincia, CCAA`.
-2. **Reducir y redondear la foto de perfil**: cambiar el contenedor actual de aspect-[3/4] y `md:w-56` a un círculo pequeño (aprox. 80×80 px, con posible ajuste responsive).
-3. **Reordenar la cabecera del perfil** para que el círculo pequeño quede alineado con el nombre y la información principal (horizontalmente), evitando un bloque lateral muy grande.
+1. **Añadir capa base clara de Leaflet** (tiles) debajo del contorno, para dar contexto geográfico al polígono del municipio. Se usarán las tiles de CARTO Positron (estilo claro, gratuito, sin API key):
+   - URL: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`
+   - Añadida con `L.tileLayer(...).addTo(map)` antes de dibujar el GeoJSON.
+   - Se reactiva `attributionControl` para respetar la atribución de CARTO/OSM.
 
-No cambiaremos lógica de base de datos ni backend; solo presentación.
+2. **Eliminar el marcador del profesional**: quitar el bloque `L.circleMarker([lat, lng], ...)` (líneas 93–101). El fallback `map.setView([lat, lng], 11)` cuando no se encuentra el polígono se mantiene para encuadrar la zona.
+
+El resto del componente (carga del GeoJSON, estilo del contorno con el color de la profesión, fitBounds) queda igual.
