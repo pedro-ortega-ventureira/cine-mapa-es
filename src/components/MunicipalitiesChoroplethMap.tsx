@@ -143,7 +143,7 @@ export function MunicipalitiesChoroplethMap({
         };
       };
 
-      const bindFeature = (layer: L.GeoJSON, feature: GeoJSON.Feature, lyr: L.Layer) => {
+      const bindFeature = (feature: GeoJSON.Feature, lyr: L.Layer) => {
         const props = feature.properties as any;
         const code = props?.codigo_ine as string;
         const name = props?.municipio as string;
@@ -174,20 +174,14 @@ export function MunicipalitiesChoroplethMap({
           (e.target as L.Path).setStyle({ weight: 2, color: "#0f172a" });
         });
         lyr.on("mouseout", (e) => {
-          layer.resetStyle(e.target as L.Path);
+          (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
         });
       };
-
-      // Main map: peninsula + Baleares
-      if (mainLayerRef.current) {
-        mainLayerRef.current.remove();
-        mainLayerRef.current = null;
-      }
       const mainLayer = L.geoJSON(
         { type: "FeatureCollection", features: peninsulaFeatures } as GeoJSON.FeatureCollection,
         {
           style: styleFn,
-          onEachFeature: (feature, lyr) => bindFeature(mainLayer, feature, lyr),
+          onEachFeature: bindFeature,
         },
       );
       mainLayer.addTo(main);
@@ -204,7 +198,7 @@ export function MunicipalitiesChoroplethMap({
           { type: "FeatureCollection", features: canariasFeatures } as GeoJSON.FeatureCollection,
           {
             style: styleFn,
-            onEachFeature: (feature, lyr) => bindFeature(insetLayer, feature, lyr),
+            onEachFeature: bindFeature,
           },
         );
         insetLayer.addTo(inset);
