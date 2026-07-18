@@ -59,6 +59,8 @@ export const Route = createFileRoute("/profesionales/$slug")({
 function Profile() {
   const p = Route.useLoaderData() as any;
   const [filmModal, setFilmModal] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     supabase.rpc("increment_profile_views", { _slug: p.slug } as any).then(() => {});
