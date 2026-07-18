@@ -143,6 +143,7 @@ function MapPage() {
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white border-dashed" /> Aproximada (centroide de provincia)
         </span>
+        <span className="ml-auto">Fondo: municipios &lt; 20.000 hab. — más intenso = menos habitantes</span>
       </div>
     </div>
   );

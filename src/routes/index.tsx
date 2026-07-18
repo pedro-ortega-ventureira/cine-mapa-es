@@ -1,33 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MunicipalityMap, type MapPoint } from "@/components/MunicipalityMap";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { colorForRole } from "@/lib/roles";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Users, MapPin, Film } from "lucide-react";
+
+const MunicipalitiesChoroplethMap = lazy(() =>
+  import("@/components/MunicipalitiesChoroplethMap").then((m) => ({
+    default: m.MunicipalitiesChoroplethMap,
+  })),
+);
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
+type OverlayRow = {
+  code: string;
+  professionals_count: number | null;
+  verified_count: number | null;
+};
+
 function Home() {
   const [q, setQ] = useState("");
   const [onlyWithPros, setOnlyWithPros] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const municipalitiesQ = useQuery({
-    queryKey: ["municipality_stats"],
+  const overlaysQ = useQuery({
+    queryKey: ["municipality_overlays"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("municipality_stats" as any)
-        .select("code,name,province,autonomous_community,population,lat,lng,professionals_count,verified_count")
-        .lt("population", 20000)
-        .limit(10000);
+        .select("code,professionals_count,verified_count")
+        .gt("professionals_count", 0)
+        .limit(20000);
       if (error) throw error;
-      return (data ?? []) as unknown as MapPoint[];
+      return ((data ?? []) as unknown as OverlayRow[]).map((r) => ({
+        code: r.code,
+        professionals_count: r.professionals_count ?? 0,
+        verified_count: r.verified_count ?? 0,
+      }));
     },
   });
-
 
   const statsQ = useQuery({
     queryKey: ["home-stats"],
@@ -54,7 +70,8 @@ function Home() {
     },
   });
 
-  const points = municipalitiesQ.data ?? [];
+  const overlays = overlaysQ.data ?? [];
+
 
   return (
     <div>
@@ -131,29 +148,20 @@ function Home() {
           </label>
 
         </div>
-        {municipalitiesQ.isLoading ? (
-          <div className="aspect-[5/4] rounded-lg bg-muted animate-pulse" />
-        ) : points.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            La base de datos de municipios aún no está cargada.{" "}
-            <a
-              href="/api/public/seed-municipalities"
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary underline"
-            >
-              Cargar dataset ahora
-            </a>
-            .
-          </div>
+        {!mounted ? (
+          <div className="rounded-lg bg-muted animate-pulse" style={{ height: 480 }} />
         ) : (
-          <MunicipalityMap
-            points={points}
-            onlyWithProfessionals={onlyWithPros}
-            onSelectMunicipality={(code) => {
-              window.location.href = `/municipios/${code}`;
-            }}
-          />
+          <Suspense
+            fallback={<div className="rounded-lg bg-muted animate-pulse" style={{ height: 480 }} />}
+          >
+            <MunicipalitiesChoroplethMap
+              overlays={overlays}
+              onlyWithProfessionals={onlyWithPros}
+              onSelectMunicipality={(code: string) => {
+                window.location.href = `/municipios/${code}`;
+              }}
+            />
+          </Suspense>
         )}
       </section>
 
