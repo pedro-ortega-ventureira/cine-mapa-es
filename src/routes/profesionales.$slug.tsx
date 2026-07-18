@@ -170,6 +170,20 @@ function Profile() {
       )}
 
       <div className="mt-6">
+        {p.bio && (
+          <div className="prose prose-sm max-w-none">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.bio}</p>
+          </div>
+        )}
+
+        {p.languages && p.languages.length > 0 && (
+          <p className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+            <Languages className="h-4 w-4" /> {p.languages.join(", ")}
+          </p>
+        )}
+      </div>
+
+
 
 
       {films.length > 0 && (
