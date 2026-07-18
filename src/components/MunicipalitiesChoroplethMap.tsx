@@ -140,6 +140,14 @@ export function MunicipalitiesChoroplethMap({
       insetLayerRef.current = null;
       mainProsRef.current = null;
       insetProsRef.current = null;
+      if (mainContainerRef.current) {
+        mainContainerRef.current.innerHTML = "";
+        (mainContainerRef.current as any)._leaflet_id = null;
+      }
+      if (insetContainerRef.current) {
+        insetContainerRef.current.innerHTML = "";
+        (insetContainerRef.current as any)._leaflet_id = null;
+      }
     };
   }, []);
 
