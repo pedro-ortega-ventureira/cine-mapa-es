@@ -54,9 +54,9 @@ function exactIconFor(p: MapProfessional): L.DivIcon {
   let html: string;
   let size: number;
   if (p.photo_url) {
-    size = 40;
+    size = 44;
     const badge = p.verified
-      ? `<span style="position:absolute;right:-2px;bottom:-2px;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;line-height:1;font-weight:700">✓</span>`
+      ? `<span style="position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;border-radius:50%;background:#10b981;border:2px solid white;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;line-height:1;font-weight:700">✓</span>`
       : "";
     html = `
       <div style="position:relative;width:${size}px;height:${size}px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);overflow:visible;background:white">
@@ -65,9 +65,9 @@ function exactIconFor(p: MapProfessional): L.DivIcon {
       </div>
     `;
   } else {
-    size = 16;
+    size = 20;
     const color = colorForRole(p.primary_role);
-    html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`;
+    html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`;
   }
 
   const icon = L.divIcon({
@@ -83,10 +83,10 @@ function exactIconFor(p: MapProfessional): L.DivIcon {
 
 const approxIcon = L.divIcon({
   className: "leaflet-approx-marker",
-  html: `<div style="width:22px;height:22px;border-radius:50%;background:rgba(120,120,120,0.55);border:2px dashed white;box-shadow:0 1px 3px rgba(0,0,0,.35)"></div>`,
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-  popupAnchor: [0, -12],
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:rgba(120,120,120,0.55);border:2px dashed white;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -16],
 });
 
 function popupHtml(p: MapProfessional) {
@@ -169,7 +169,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
     main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [10, 10] });
 
     const mainCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 45 });
+      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 55 });
     main.addLayer(mainCluster);
     mainMapRef.current = main;
     mainClusterRef.current = mainCluster;
@@ -189,7 +189,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 30 });
+        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 40 });
       inset.addLayer(insetCluster);
       insetMapRef.current = inset;
       insetClusterRef.current = insetCluster;
@@ -237,8 +237,18 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       insetMapRef.current = null;
       mainClusterRef.current = null;
       insetClusterRef.current = null;
+      // Clear container ids so strict-mode remounts can reinitialize Leaflet
+      if (mainContainerRef.current) {
+        mainContainerRef.current.innerHTML = "";
+        (mainContainerRef.current as any)._leaflet_id = null;
+      }
+      if (insetContainerRef.current) {
+        insetContainerRef.current.innerHTML = "";
+        (insetContainerRef.current as any)._leaflet_id = null;
+      }
     };
   }, []);
+
 
   const key = useMemo(() => professionals.map((p) => p.id).join("|"), [professionals]);
   useEffect(() => {
