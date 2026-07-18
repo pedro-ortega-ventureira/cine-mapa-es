@@ -50,10 +50,9 @@ function Home() {
     queryFn: async () => {
       const [pros, muni] = await Promise.all([
         supabase.from("professionals").select("*", { count: "exact", head: true }).eq("verified", true),
-        supabase.from("professionals").select("municipality_code").eq("verified", true).not("municipality_code", "is", null),
+        supabase.from("municipalities").select("*", { count: "exact", head: true }).lt("population", 20000),
       ]);
-      const distinctMuni = new Set((muni.data ?? []).map((r: any) => r.municipality_code));
-      return { professionals: pros.count ?? 0, municipalities: distinctMuni.size };
+      return { professionals: pros.count ?? 0, municipalities: muni.count ?? 0 };
     },
   });
 
@@ -141,7 +140,7 @@ function Home() {
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span className="font-semibold">{statsQ.data?.municipalities ?? "—"}</span>
-                <span className="text-muted-foreground">municipios representados</span>
+                <span className="text-muted-foreground">municipios menores de 20.000 habitantes</span>
               </div>
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <Film className="h-4 w-4 text-primary" />

@@ -1,16 +1,24 @@
-# Ajuste de tarjetas en el directorio
+## Problema
+En la home, la tarjeta "municipios representados" muestra 0 porque calcula los códigos de municipio asignados a profesionales verificados (`municipality_code`), y actualmente ningún profesional tiene ese campo rellenado.
 
-## Contexto
-Actualmente, en `/directorio` la vista de tarjetas (`ProfessionalCard`) muestra una imagen grande con ratio 4/5 ocupando todo el ancho superior de la tarjeta.
+## Datos reales
+- Profesionales verificados: 95
+- Municipios con `population < 20000`: 7.718
+- Distintos `municipality_code` entre profesionales verificados: 0
 
-## Cambio solicitado
-- En la página de directorio, usar un círculo pequeño para la imagen/avatar del profesional, similar al estilo de la vista de lista y las tarjetas de la home.
-- Rediseñar la tarjeta para que el avatar circular quede alineado junto al nombre y la información, en lugar de como una imagen de hero de la tarjeta.
-- Si no hay foto, usar un círculo con color de la profesión o un ícono `User` centrado.
+## Solución
+Actualizar la consulta de estadísticas en `src/routes/index.tsx` para obtener el conteo directamente de la tabla `municipalities` filtrando por `population < 20000`.
 
-## Archivos a modificar
-- `src/components/ProfessionalCard.tsx`: cambiar el layout de la tarjeta a formato horizontal con avatar circular pequeño.
-- Opcionalmente ajustar `src/routes/directorio.tsx` si es necesario adaptar la grid a la nueva forma compacta.
+### Cambios concretos
+- En `statsQ`, reemplazar la segunda consulta (que contaba profesionales agrupados por `municipality_code`) por:
+  ```ts
+  supabase.from("municipalities").select("*", { count: "exact", head: true }).lt("population", 20000)
+  ```
+- Usar ese `count` para la tarjeta.
+- Renombrar la etiqueta de la tarjeta de "municipios representados" a "municipios menores de 20.000 habitantes" para que coincida con el dato real.
+- Mantener la tarjeta de profesionales verificados sin cambios.
 
-## Resultado esperado
-Tarjetas más compactas y consistentes con el resto de la aplicación, donde el avatar es un círculo pequeño.
+### Archivo afectado
+- `src/routes/index.tsx`
+
+Si prefieres conservar la etiqueta "municipios representados" aunque el número sea el total de municipios, dímelo y lo ajusto.
