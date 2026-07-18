@@ -194,6 +194,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
         boxZoom: false,
         keyboard: false,
         touchZoom: false,
+        maxZoom: 12,
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
