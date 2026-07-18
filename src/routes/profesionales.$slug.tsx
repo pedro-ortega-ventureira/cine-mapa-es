@@ -81,17 +81,23 @@ function Profile() {
           {p.primary_role && (
             <p className="mt-1 text-base md:text-lg font-medium text-primary">{p.primary_role}</p>
           )}
-          {(munic || p.raw_postal_code) && (
+          {(munic || p.raw_postal_code || p.geo_municipality_name || p.geo_province) && (
             <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
               <MapPin className="h-4 w-4" />
               {p.raw_postal_code ? <span>CP {p.raw_postal_code}</span> : null}
-              {p.raw_postal_code && munic ? <span className="text-muted-foreground/60">·</span> : null}
+              {(p.raw_postal_code && (munic || p.geo_municipality_name || p.geo_province)) ? (
+                <span className="text-muted-foreground/60">·</span>
+              ) : null}
               {munic ? (
                 <span>
                   {munic.name}, {munic.province}
                   {munic.autonomous_community ? `, ${munic.autonomous_community}` : ""}
                 </span>
-              ) : null}
+              ) : (
+                <span>
+                  {[p.geo_municipality_name, p.geo_province].filter(Boolean).join(", ")}
+                </span>
+              )}
             </p>
           )}
 
