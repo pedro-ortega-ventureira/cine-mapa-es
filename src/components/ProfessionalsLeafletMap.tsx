@@ -169,7 +169,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
     main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [10, 10] });
 
     const mainCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 45 });
+      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 55 });
     main.addLayer(mainCluster);
     mainMapRef.current = main;
     mainClusterRef.current = mainCluster;
@@ -189,7 +189,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 30 });
+        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 40 });
       inset.addLayer(insetCluster);
       insetMapRef.current = inset;
       insetClusterRef.current = insetCluster;
