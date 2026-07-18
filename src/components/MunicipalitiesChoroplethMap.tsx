@@ -341,10 +341,38 @@ export function MunicipalitiesChoroplethMap({
       const lng = first.geo_lng!;
       const target = isCanariasPoint(first) ? insetGroup : mainGroup;
       if (!target) continue;
+      const isInset = target === insetGroup;
+      const municipalityLabel = first.geo_municipality_name ?? "";
+
+      // Optional label above the point/cluster with municipality name
+      if (municipalityLabel) {
+        try {
+          const labelHtml = `<div style="
+            font-family:system-ui,sans-serif;
+            font-size:${isInset ? 8 : 10}px;
+            font-weight:700;
+            color:#0f172a;
+            text-align:center;
+            line-height:1.2;
+            padding:2px 5px;
+            border-radius:999px;
+            background:rgba(255,255,255,0.88);
+            box-shadow:0 1px 2px rgba(15,23,42,0.12);
+            white-space:nowrap;
+            pointer-events:none;
+          ">${escapeHtml(municipalityLabel)}</div>`;
+          const labelIcon = L.divIcon({
+            className: "municipality-label",
+            html: labelHtml,
+            iconSize: [isInset ? 80 : 100, 18],
+            iconAnchor: [isInset ? 40 : 50, 18 + (isInset ? 10 : 12)],
+          });
+          L.marker([lat, lng], { icon: labelIcon, zIndexOffset: 900, interactive: false }).addTo(target);
+        } catch {}
+      }
 
       if (list.length === 1) {
         const p = first;
-        const isInset = target === insetGroup;
         const color = colorForRole(p.primary_role);
         const marker = L.circleMarker([lat, lng], {
           pane: "pros",
@@ -367,7 +395,6 @@ export function MunicipalitiesChoroplethMap({
         );
         marker.addTo(target);
       } else {
-        const isInset = target === insetGroup;
         const count = list.length;
         const size = isInset
           ? Math.min(36, 26 + Math.round(Math.log2(count) * 4))
