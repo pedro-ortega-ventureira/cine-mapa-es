@@ -1,10 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Award, GraduationCap, MapPin, Globe, Languages, Mail, Video, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/ContactDialog";
+import { colorForRole } from "@/lib/roles";
+
+const MunicipalityContourMap = lazy(() =>
+  import("@/components/MunicipalityContourMap").then((m) => ({
+    default: m.MunicipalityContourMap,
+  })),
+);
 
 export const Route = createFileRoute("/profesionales/$slug")({
   loader: async ({ params }) => {
