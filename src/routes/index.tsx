@@ -70,7 +70,25 @@ function Home() {
     },
   });
 
+  const mapProsQ = useQuery({
+    queryKey: ["verified-pros-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("id,slug,full_name,primary_role,postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
+        .eq("verified", true)
+        .eq("geo_accuracy", "exact")
+        .not("geo_lat", "is", null)
+        .not("geo_lng", "is", null)
+        .limit(5000);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const overlays = overlaysQ.data ?? [];
+  const mapPros = mapProsQ.data ?? [];
+
 
 
   return (
