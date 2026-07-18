@@ -75,7 +75,7 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
-        .select("id,slug,full_name,primary_role,postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
+        .select("id,slug,full_name,primary_role,raw_postal_code:postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
         .eq("verified", true)
         .eq("geo_accuracy", "exact")
         .not("geo_lat", "is", null)
