@@ -1,13 +1,7 @@
-## Problema
-En la vista actual a escala de toda España (móvil y escritorio) los puntos de profesionales individuales (radio 6) y los clusters (tamaño mínimo 22) quedan apenas visibles sobre los municipios.
+Modificaremos la página de perfil público del profesional (`src/routes/profesionales.$slug.tsx`) para:
 
-## Cambio propuesto
-Aumentar el tamaño de los marcadores en `src/components/MunicipalitiesChoroplethMap.tsx` sin cambiar la lógica de agrupación ni el resto del estilo:
+1. **Mostrar código postal + municipio + provincia** en una única línea de ubicación, usando `raw_postal_code` (disponible en la tabla) y los datos de `municipalities`. El formato será: `CP XXXXX — Municipio, Provincia, CCAA`.
+2. **Reducir y redondear la foto de perfil**: cambiar el contenedor actual de aspect-[3/4] y `md:w-56` a un círculo pequeño (aprox. 80×80 px, con posible ajuste responsive).
+3. **Reordenar la cabecera del perfil** para que el círculo pequeño quede alineado con el nombre y la información principal (horizontalmente), evitando un bloque lateral muy grande.
 
-- **Profesional individual:** pasar el radio de `6` a `10` (vista principal) y `8` en el recuadro de Canarias.
-- **Cluster:** base de `22` a `34`, máximo de `34` a `48`, y factor logarítmico ajustado para que el crecimiento se note.
-- **Bordes:** aumentar el grosor del borde blanco de `2` a `3` para mejor contraste sobre los polígonos azules de población.
-- **Pane / z-index:** mantener el pane `pros` en `z-index: 650` para que sigan por encima de los municipios.
-
-## Verificación
-Recargar la home y el mapa completo, confirmar que los puntos individuales y clusters se distinguen claramente a la escala de España y que los popups siguen funcionando.
+No cambiaremos lógica de base de datos ni backend; solo presentación.

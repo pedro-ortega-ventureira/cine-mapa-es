@@ -62,58 +62,46 @@ function Profile() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="md:w-56 flex-shrink-0">
-          <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden">
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-muted overflow-hidden border shadow-sm">
             {p.photo_url ? (
               <img src={p.photo_url} alt={p.full_name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-6xl text-muted-foreground font-bold">
+              <div className="w-full h-full flex items-center justify-center text-xl md:text-2xl text-muted-foreground font-bold">
                 {p.full_name.slice(0, 1)}
               </div>
             )}
           </div>
-          {(p.email || p.website) && (
-            <div className="mt-4 space-y-2 text-sm">
-              <ContactDialog professionalId={p.id} professionalName={p.full_name} />
-              {p.website && (
-                <a
-                  href={p.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <Globe className="h-4 w-4" /> Web
-                </a>
-              )}
-              {p.reel_url && (
-                <a
-                  href={p.reel_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <Video className="h-4 w-4" /> Showreel
-                </a>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold">{p.full_name}</h1>
-          {p.alias && <p className="text-muted-foreground italic">{p.alias}</p>}
+          <h1 className="text-2xl md:text-3xl font-bold">{p.full_name}</h1>
+          {p.alias && <p className="text-sm text-muted-foreground italic">{p.alias}</p>}
           {p.primary_role && (
-            <p className="mt-2 text-lg font-medium text-primary">{p.primary_role}</p>
+            <p className="mt-1 text-base md:text-lg font-medium text-primary">{p.primary_role}</p>
           )}
-          {munic && (
+          {(munic || p.raw_postal_code || p.geo_municipality_name || p.geo_province) && (
             <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-4 w-4" /> {munic.name}, {munic.province} ·{" "}
-              {munic.autonomous_community}
+              <MapPin className="h-4 w-4" />
+              {p.raw_postal_code ? <span>CP {p.raw_postal_code}</span> : null}
+              {(p.raw_postal_code && (munic || p.geo_municipality_name || p.geo_province)) ? (
+                <span className="text-muted-foreground/60">·</span>
+              ) : null}
+              {munic ? (
+                <span>
+                  {munic.name}, {munic.province}
+                  {munic.autonomous_community ? `, ${munic.autonomous_community}` : ""}
+                </span>
+              ) : (
+                <span>
+                  {[p.geo_municipality_name, p.geo_province].filter(Boolean).join(", ")}
+                </span>
+              )}
             </p>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {(p.secondary_roles ?? []).map((r: string) => (
               <span key={r} className="text-xs bg-secondary rounded-full px-2 py-0.5">
                 {r}
@@ -129,19 +117,48 @@ function Profile() {
             ))}
           </div>
 
-          {p.bio && (
-            <div className="mt-6 prose prose-sm max-w-none">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.bio}</p>
+          {(p.email || p.website) && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <ContactDialog professionalId={p.id} professionalName={p.full_name} />
+              {p.website && (
+                <a
+                  href={p.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Globe className="h-4 w-4" /> Web
+                </a>
+              )}
+              {p.reel_url && (
+                <a
+                  href={p.reel_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Video className="h-4 w-4" /> Showreel
+                </a>
+              )}
             </div>
-          )}
-
-          {p.languages && p.languages.length > 0 && (
-            <p className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
-              <Languages className="h-4 w-4" /> {p.languages.join(", ")}
-            </p>
           )}
         </div>
       </div>
+
+      <div className="mt-6">
+        {p.bio && (
+          <div className="prose prose-sm max-w-none">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.bio}</p>
+          </div>
+        )}
+
+        {p.languages && p.languages.length > 0 && (
+          <p className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+            <Languages className="h-4 w-4" /> {p.languages.join(", ")}
+          </p>
+        )}
+      </div>
+
 
       {films.length > 0 && (
         <section className="mt-10">
