@@ -84,14 +84,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Directorio de profesionales del sector audiovisual que viven y trabajan en municipios de menos de 20.000 habitantes en España.",
       },
-      { property: "og:title", content: "Directorio audiovisual del medio rural" },
+      { property: "og:title", content: "Directorio audiovisual del medio rural — España" },
       {
         property: "og:description",
         content:
-          "Profesionales del audiovisual radicados en municipios rurales españoles: mapa interactivo, filmografía y contacto.",
+          "Directorio de profesionales del sector audiovisual que viven y trabajan en municipios de menos de 20.000 habitantes en España.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Directorio audiovisual del medio rural — España" },
+      { name: "twitter:description", content: "Directorio de profesionales del sector audiovisual que viven y trabajan en municipios de menos de 20.000 habitantes en España." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/cfcccb7b-1b93-4d52-bc43-e377daec67a5/id-preview-a359403d--094f66bd-86ce-41d8-b0ec-b93fedfc2b4b.lovable.app-1784393662935.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/cfcccb7b-1b93-4d52-bc43-e377daec67a5/id-preview-a359403d--094f66bd-86ce-41d8-b0ec-b93fedfc2b4b.lovable.app-1784393662935.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
