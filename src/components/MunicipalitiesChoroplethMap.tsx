@@ -227,36 +227,6 @@ export function MunicipalitiesChoroplethMap({
           (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
         });
 
-        // Permanent label on polygons with professionals
-        if (hasPros) {
-          try {
-            const bounds = (lyr as any).getBounds?.();
-            if (!bounds) return;
-            const center = bounds.getCenter();
-            const labelHtml = `<div style="
-              font-family:system-ui,sans-serif;
-              font-size:${isInset ? 9 : 11}px;
-              font-weight:700;
-              color:#0f172a;
-              text-align:center;
-              line-height:1.2;
-              padding:2px 6px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.82);
-              box-shadow:0 1px 2px rgba(15,23,42,0.15);
-              white-space:nowrap;
-              pointer-events:none;
-            ">${escapeHtml(name)}</div>`;
-            const labelIcon = L.divIcon({
-              className: "municipality-label",
-              html: labelHtml,
-              iconSize: [isInset ? 90 : 110, 22],
-              iconAnchor: [isInset ? 45 : 55, 11],
-            });
-            const labelMarker = L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false });
-            labelMarker.addTo(targetMap);
-          } catch {}
-        }
       };
 
       if (mainLayerRef.current) {
@@ -412,32 +382,6 @@ export function MunicipalitiesChoroplethMap({
         markerCenter = L.latLng(lat, lng);
       }
 
-      // Optional label above the point/cluster with municipality name
-      if (municipalityLabel && markerCenter) {
-        try {
-          const labelHtml = `<div style="
-            font-family:system-ui,sans-serif;
-            font-size:${isInset ? 8 : 10}px;
-            font-weight:700;
-            color:#0f172a;
-            text-align:center;
-            line-height:1.2;
-            padding:2px 5px;
-            border-radius:999px;
-            background:rgba(255,255,255,0.92);
-            box-shadow:0 1px 2px rgba(15,23,42,0.15);
-            white-space:nowrap;
-            pointer-events:none;
-          ">${escapeHtml(municipalityLabel)}</div>`;
-          const labelIcon = L.divIcon({
-            className: "municipality-label",
-            html: labelHtml,
-            iconSize: [isInset ? 80 : 100, 18],
-            iconAnchor: [isInset ? 40 : 50, 18 + (isInset ? 10 : 12)],
-          });
-          L.marker(markerCenter, { icon: labelIcon, zIndexOffset: 1000, interactive: false }).addTo(target);
-        } catch {}
-      }
     }
   }, [professionals]);
 
