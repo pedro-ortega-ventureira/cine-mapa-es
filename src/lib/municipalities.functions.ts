@@ -2,16 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 
 export const seedMunicipalities = createServerFn({ method: "POST" }).handler(async () => {
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const supabase = supabaseAdmin;
 
   const { count } = await supabase
     .from("municipalities")
     .select("*", { count: "exact", head: true });
   if ((count ?? 0) > 5000) return { alreadySeeded: true, count };
+
 
   const res = await fetch(
     "https://gist.githubusercontent.com/soft2help/6f5fd0a2cb6d02da3e87fb61edcc4353/raw/localidades.csv",
