@@ -160,13 +160,17 @@ function Profile() {
             <MapPin className="h-4 w-4" /> Ubicación
           </h2>
           <Suspense fallback={<div className="h-[260px] rounded-md border bg-muted/40 animate-pulse" />}>
-            <MunicipalityContourMap
-              municipalityCode={munic?.code ?? null}
-              municipalityName={munic?.name ?? p.geo_municipality_name ?? null}
-              lat={p.geo_lat ?? munic?.lat ?? null}
-              lng={p.geo_lng ?? munic?.lng ?? null}
-              color={colorForRole(p.primary_role)}
-            />
+            {mounted ? (
+              <MunicipalityContourMap
+                municipalityCode={munic?.code ?? null}
+                municipalityName={munic?.name ?? p.geo_municipality_name ?? null}
+                lat={p.geo_lat ?? munic?.lat ?? null}
+                lng={p.geo_lng ?? munic?.lng ?? null}
+                color={colorForRole(p.primary_role)}
+              />
+            ) : (
+              <div className="h-[260px] rounded-md border bg-muted/40" />
+            )}
           </Suspense>
         </div>
       )}
