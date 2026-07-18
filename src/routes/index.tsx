@@ -16,23 +16,34 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+type OverlayRow = {
+  code: string;
+  professionals_count: number | null;
+  verified_count: number | null;
+};
+
 function Home() {
   const [q, setQ] = useState("");
   const [onlyWithPros, setOnlyWithPros] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const municipalitiesQ = useQuery({
-    queryKey: ["municipality_stats"],
+  const overlaysQ = useQuery({
+    queryKey: ["municipality_overlays"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("municipality_stats" as any)
-        .select("code,name,province,autonomous_community,population,lat,lng,professionals_count,verified_count")
-        .lt("population", 20000)
-        .limit(10000);
+        .select("code,professionals_count,verified_count")
+        .gt("professionals_count", 0)
+        .limit(20000);
       if (error) throw error;
-      return (data ?? []) as unknown as MapPoint[];
+      return ((data ?? []) as unknown as OverlayRow[]).map((r) => ({
+        code: r.code,
+        professionals_count: r.professionals_count ?? 0,
+        verified_count: r.verified_count ?? 0,
+      }));
     },
   });
-
 
   const statsQ = useQuery({
     queryKey: ["home-stats"],
@@ -59,7 +70,8 @@ function Home() {
     },
   });
 
-  const points = municipalitiesQ.data ?? [];
+  const overlays = overlaysQ.data ?? [];
+
 
   return (
     <div>
