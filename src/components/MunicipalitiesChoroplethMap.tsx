@@ -88,6 +88,10 @@ export function MunicipalitiesChoroplethMap({
   useEffect(() => {
     if (!mainContainerRef.current || mainMapRef.current) return;
 
+    const mainContainer = mainContainerRef.current;
+    mainContainer.innerHTML = "";
+    (mainContainer as any)._leaflet_id = null;
+
     const commonOpts: L.MapOptions = {
       zoomControl: false,
       attributionControl: false,
@@ -97,10 +101,11 @@ export function MunicipalitiesChoroplethMap({
       dragging: true,
     };
 
-    const main = L.map(mainContainerRef.current, {
+    const main = L.map(mainContainer, {
       ...commonOpts,
       zoomControl: true,
       minZoom: 4,
+      maxZoom: 18,
     });
     main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [8, 8] });
     main.createPane("pros");
@@ -109,13 +114,17 @@ export function MunicipalitiesChoroplethMap({
     mainMapRef.current = main;
 
     if (insetContainerRef.current) {
-      const inset = L.map(insetContainerRef.current, {
+      const insetContainer = insetContainerRef.current;
+      insetContainer.innerHTML = "";
+      (insetContainer as any)._leaflet_id = null;
+      const inset = L.map(insetContainer, {
         ...commonOpts,
         dragging: false,
         doubleClickZoom: false,
         boxZoom: false,
         keyboard: false,
         touchZoom: false,
+        maxZoom: 12,
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
       inset.createPane("pros");
