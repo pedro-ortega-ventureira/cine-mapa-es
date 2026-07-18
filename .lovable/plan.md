@@ -1,24 +1,25 @@
-## Problema
-En la home, la tarjeta "municipios representados" muestra 0 porque calcula los códigos de municipio asignados a profesionales verificados (`municipality_code`), y actualmente ningún profesional tiene ese campo rellenado.
+## Diagnóstico
 
-## Datos reales
-- Profesionales verificados: 95
-- Municipios con `population < 20000`: 7.718
-- Distintos `municipality_code` entre profesionales verificados: 0
+Las peticiones a `professionals` desde la home y `/mapa` devuelven **403 "permission denied for table professionals"**. En la migración de seguridad anterior se revocó `SELECT` a `anon` y se restringió a columnas concretas para `authenticated`, pero por el error `GRANT SELECT ON public.professionals TO authenticated` el rol `anon` (usado por visitantes anónimos) ya no puede leer **ninguna** columna, y `authenticated` tampoco tiene grants sobre las columnas que la home/mapa piden (`geo_lat`, `geo_lng`, `geo_accuracy`, `raw_postal_code`, etc. quedaron fuera).
 
-## Solución
-Actualizar la consulta de estadísticas en `src/routes/index.tsx` para obtener el conteo directamente de la tabla `municipalities` filtrando por `population < 20000`.
+Consecuencia: el mapa recibe 0 profesionales porque la consulta falla antes de aplicar RLS.
 
-### Cambios concretos
-- En `statsQ`, reemplazar la segunda consulta (que contaba profesionales agrupados por `municipality_code`) por:
-  ```ts
-  supabase.from("municipalities").select("*", { count: "exact", head: true }).lt("population", 20000)
-  ```
-- Usar ese `count` para la tarjeta.
-- Renombrar la etiqueta de la tarjeta de "municipios representados" a "municipios menores de 20.000 habitantes" para que coincida con el dato real.
-- Mantener la tarjeta de profesionales verificados sin cambios.
+## Plan (una sola migración SQL)
 
-### Archivo afectado
-- `src/routes/index.tsx`
+Restaurar grants a nivel de columna sobre `public.professionals` para las columnas **no sensibles** que la UI pública necesita, tanto para `anon` como para `authenticated`. Mantener revocado el acceso a PII (email, teléfono, NIF/CIF) según la política de seguridad ya acordada.
 
-Si prefieres conservar la etiqueta "municipios representados" aunque el número sea el total de municipios, dímelo y lo ajusto.
+Columnas públicas a conceder (SELECT) a `anon` y `authenticated`:
+
+- Identidad pública: `id`, `slug`, `full_name`, `alias`, `photo_url`, `bio`
+- Rol y perfil: `primary_role`, `roles`, `specialties`, `languages`, `showreel_url`, `website_url`, `social_links`
+- Estado: `verified`, `date_joined`, `profile_views`, `created_at`, `updated_at`
+- Ubicación (no exacta): `municipality_code`, `geo_municipality_name`, `geo_province`, `geo_accuracy`, `raw_postal_code`
+- Coordenadas para el mapa: `geo_lat`, `geo_lng` — se conceden porque el mapa las necesita para posicionar puntos; son a nivel municipal (no dirección exacta) y ya se muestran públicamente en el mapa.
+
+Columnas que **siguen sin acceso** para `anon`/`authenticated` (solo `service_role`): `email`, `phone`, `nif_cif`, `address`, y cualquier otra columna de PII/facturación existente.
+
+`service_role` conserva `ALL`.
+
+## Verificación
+
+Tras la migración: recargar `/` y `/mapa`, confirmar que las peticiones a `professionals` devuelven 200 y que los puntos aparecen sobre el mapa coroplético.
