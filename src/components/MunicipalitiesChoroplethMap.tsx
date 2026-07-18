@@ -295,12 +295,13 @@ export function MunicipalitiesChoroplethMap({
 
       if (list.length === 1) {
         const p = first;
+        const isInset = target === insetGroup;
         const color = colorForRole(p.primary_role);
         const marker = L.circleMarker([lat, lng], {
           pane: "pros",
-          radius: 6,
+          radius: isInset ? 8 : 10,
           color: "#ffffff",
-          weight: 2,
+          weight: 3,
           fillColor: color,
           fillOpacity: 0.95,
           opacity: 1,
