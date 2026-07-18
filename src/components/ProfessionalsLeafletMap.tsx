@@ -137,34 +137,15 @@ function escapeAttr(s: string) {
   }[c]!));
 }
 
-// -------- Spain outline GeoJSON (cached at module + sessionStorage) --------
-const SPAIN_GEOJSON_URL =
-  "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson";
-const SPAIN_CACHE_KEY = "spain-communities-geojson-v1";
-
-let spainGeoPromise: Promise<GeoJSON.GeoJsonObject | null> | null = null;
-function loadSpainGeo(): Promise<GeoJSON.GeoJsonObject | null> {
-  if (spainGeoPromise) return spainGeoPromise;
-  spainGeoPromise = (async () => {
-    try {
-      if (typeof sessionStorage !== "undefined") {
-        const cached = sessionStorage.getItem(SPAIN_CACHE_KEY);
-        if (cached) return JSON.parse(cached) as GeoJSON.GeoJsonObject;
-      }
-      const res = await fetch(SPAIN_GEOJSON_URL);
-      if (!res.ok) return null;
-      const json = (await res.json()) as GeoJSON.GeoJsonObject;
-      try {
-        sessionStorage?.setItem(SPAIN_CACHE_KEY, JSON.stringify(json));
-      } catch {
-        /* quota, ignore */
-      }
-      return json;
-    } catch {
-      return null;
-    }
-  })();
-  return spainGeoPromise;
+// -------- Municipios GeoJSON (choropleth base layer) --------
+const MUNI_GEOJSON_URL = "/geo/municipios-lt20k.geojson";
+let muniGeoPromise: Promise<GeoJSON.FeatureCollection | null> | null = null;
+function loadMuniGeo(): Promise<GeoJSON.FeatureCollection | null> {
+  if (muniGeoPromise) return muniGeoPromise;
+  muniGeoPromise = fetch(MUNI_GEOJSON_URL)
+    .then((r) => (r.ok ? (r.json() as Promise<GeoJSON.FeatureCollection>) : null))
+    .catch(() => null);
+  return muniGeoPromise;
 }
 
 type Props = {
