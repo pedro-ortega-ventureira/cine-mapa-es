@@ -312,9 +312,6 @@ export function MunicipalitiesChoroplethMap({
       const target = isCanariasPoint(first) ? insetGroup : mainGroup;
       if (!target) continue;
       const isInset = target === insetGroup;
-      const municipalityLabel = first.geo_municipality_name ?? "";
-      let markerCenter: L.LatLng | null = null;
-
       if (list.length === 1) {
         const p = first;
         const color = colorForRole(p.primary_role);
@@ -338,7 +335,6 @@ export function MunicipalitiesChoroplethMap({
           </div>`,
         );
         marker.addTo(target);
-        markerCenter = L.latLng(lat, lng);
       } else {
         const count = list.length;
         const size = isInset
@@ -379,7 +375,6 @@ export function MunicipalitiesChoroplethMap({
           </div>`,
         );
         marker.addTo(target);
-        markerCenter = L.latLng(lat, lng);
       }
 
     }
