@@ -70,7 +70,25 @@ function Home() {
     },
   });
 
+  const mapProsQ = useQuery({
+    queryKey: ["verified-pros-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("id,slug,full_name,primary_role,postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
+        .eq("verified", true)
+        .eq("geo_accuracy", "exact")
+        .not("geo_lat", "is", null)
+        .not("geo_lng", "is", null)
+        .limit(5000);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const overlays = overlaysQ.data ?? [];
+  const mapPros = mapProsQ.data ?? [];
+
 
 
   return (
@@ -156,6 +174,7 @@ function Home() {
           >
             <MunicipalitiesChoroplethMap
               overlays={overlays}
+              professionals={mapPros}
               onlyWithProfessionals={onlyWithPros}
               onSelectMunicipality={(code: string) => {
                 window.location.href = `/municipios/${code}`;
@@ -163,6 +182,10 @@ function Home() {
             />
           </Suspense>
         )}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Los puntos de color indican profesionales verificados según su código postal. Los círculos oscuros con número agrupan varios profesionales que comparten el mismo CP.
+        </p>
+
       </section>
 
       {latestQ.data && latestQ.data.length > 0 && (
