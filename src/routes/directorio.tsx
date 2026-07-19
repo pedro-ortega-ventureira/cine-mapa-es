@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ProfessionalCard } from "@/components/ProfessionalCard";
 import { AUTONOMOUS_COMMUNITIES, PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
+import { provinceForPostalCode, PROVINCE_TO_CCAA, PROVINCE_NAMES } from "@/lib/spain-provinces";
 import { Search, Grid3x3, List, X, Map as MapIcon, ChevronUp } from "lucide-react";
 import type { MapProfessional } from "@/components/ProfessionalsLeafletMap";
 import { z } from "zod";
@@ -86,6 +87,12 @@ function Directorio() {
         ? [search.provincia]
         : parsed.provinces.map((p) => p.display);
 
+      // codeSet: municipios que coinciden por nombre/provincia/CCAA según la
+      // tabla `municipalities`. Solo sirve para profesionales que YA tienen
+      // `municipality_code` asignado — y muchos no lo tienen (CP ambiguo o
+      // sin resolver), por eso NO se usa como único filtro: se combina más
+      // abajo con la provincia/CCAA derivada directamente del código postal
+      // del profesional, que es el dato que casi siempre existe.
       let codeSet: Set<string> | null = null;
       if (effectiveProvinces.length || effectiveCcaa.length || parsed.municipalities.length) {
         codeSet = new Set<string>();
@@ -98,16 +105,25 @@ function Directorio() {
         for (const m of parsed.municipalities) codeSet.add(m.code);
       }
 
+      const locationFilterActive =
+        effectiveProvinces.length > 0 || effectiveCcaa.length > 0 || parsed.municipalities.length > 0;
+
+      // Cuando hay texto libre o filtro de ubicación, el filtrado real ocurre
+      // en el cliente (ver más abajo), así que hay que traer todo el
+      // directorio y no solo los últimos 500 — si no, profesionales que no
+      // están entre los más recientes nunca aparecían en los resultados.
+      const fetchLimit = parsed.freeText || locationFilterActive ? 5000 : 500;
+
       let query = supabase
         .from("professionals")
         .select(
           sel(
-            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,tags,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
+            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,raw_postal_code,tags,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
           ),
         )
         .eq("verified", true)
         .order("date_joined", { ascending: false })
-        .limit(500);
+        .limit(fetchLimit);
 
       if (effectiveRoles.length === 1) {
         query = query.ilike("primary_role", `%${effectiveRoles[0]}%`);
@@ -118,19 +134,43 @@ function Directorio() {
 
       if (search.tipo) query = query.contains("production_types", [search.tipo]);
 
-      if (codeSet && codeSet.size) {
-        const codes = [...codeSet];
-        if (codes.length <= 800) {
-          query = query.in("municipality_code", codes);
-        }
-      }
-
       const { data, error } = await query.returns<any[]>();
       if (error) throw error;
       let rows = data ?? [];
 
-      if (codeSet && codeSet.size > 800) {
-        rows = rows.filter((r: any) => r.municipality_code && codeSet!.has(r.municipality_code));
+      if (locationFilterActive) {
+        const provNorms = effectiveProvinces.map(normalize);
+        const ccaaNorms = effectiveCcaa.map(normalize);
+        const muniPhrases = parsed.municipalities.map((m) => m.phrase);
+        rows = rows.filter((r: any) => {
+          // 1) Coincide por municipio ya vinculado (cuando existe el enlace).
+          if (r.municipality_code && codeSet!.has(r.municipality_code)) return true;
+          // 2) Coincide por nombre de localidad geocodificada.
+          if (r.geo_municipality_name) {
+            const gn = normalize(r.geo_municipality_name);
+            if (muniPhrases.some((p) => gn.includes(p))) return true;
+          }
+          // 3) Coincide por provincia/CCAA derivada del código postal — esto
+          //    cubre a los profesionales sin municipality_code asignado. Se
+          //    prioriza el CP (fuente fiable y determinista) sobre
+          //    geo_province: ese campo viene a veces de una API externa que,
+          //    para España, devuelve el nombre de la comunidad autónoma en
+          //    lugar de la provincia, así que no es fiable como provincia.
+          const derivedProv = provinceForPostalCode(r.raw_postal_code);
+          if (derivedProv) {
+            if (provNorms.includes(normalize(derivedProv))) return true;
+            const derivedCcaa = PROVINCE_TO_CCAA[derivedProv];
+            if (derivedCcaa && ccaaNorms.includes(normalize(derivedCcaa))) return true;
+          }
+          // 4) Respaldo final con geo_province tal cual viene guardado,
+          //    probando contra provincia y CCAA (puede ser cualquiera de
+          //    las dos según cómo se resolvió).
+          if (r.geo_province) {
+            const gp = normalize(r.geo_province);
+            if (provNorms.includes(gp) || ccaaNorms.includes(gp)) return true;
+          }
+          return false;
+        });
       }
 
       if (parsed.freeText) {
@@ -246,6 +286,12 @@ function Directorio() {
             value={search.ccaa ?? ""}
             options={AUTONOMOUS_COMMUNITIES}
             onChange={(v) => navigate({ search: { ...search, ccaa: v || undefined } })}
+          />
+          <FilterSelect
+            label="Provincia"
+            value={search.provincia ?? ""}
+            options={PROVINCE_NAMES}
+            onChange={(v) => navigate({ search: { ...search, provincia: v || undefined } })}
           />
           <FilterSelect
             label="Rol principal"

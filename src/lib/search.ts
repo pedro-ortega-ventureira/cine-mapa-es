@@ -1,5 +1,6 @@
 import { ROLE_SYNONYMS } from "./roleSynonyms";
 import { AUTONOMOUS_COMMUNITIES } from "./constants";
+import { PROVINCE_NAMES } from "./spain-provinces";
 
 export function normalize(s: string): string {
   return s
@@ -56,6 +57,13 @@ export function buildMunIndex(rows: MunRow[]): MunIndex {
   for (const c of AUTONOMOUS_COMMUNITIES) {
     const key = normalize(c);
     if (!ccaaDisplay.has(key)) ccaaDisplay.set(key, c);
+  }
+  // Igual que con las CCAA: nos asegura reconocer cualquier provincia
+  // española aunque la tabla `municipalities` no tenga ese dato bien
+  // rellenado para ningún municipio.
+  for (const p of PROVINCE_NAMES) {
+    const key = normalize(p);
+    if (!provinceDisplay.has(key)) provinceDisplay.set(key, p);
   }
   return { provinceToCodes, ccaaToCodes, municipalityByName, provinceDisplay, ccaaDisplay };
 }
@@ -115,8 +123,10 @@ export function parseQuery(raw: string, index: MunIndex): ParsedQuery {
     if (consume(key)) ccaa.set(index.ccaaDisplay.get(key) ?? key, key);
   }
 
-  // 3) Provinces
-  const provKeys = [...index.provinceToCodes.keys()].sort((a, b) => b.length - a.length);
+  // 3) Provinces — se recorre provinceDisplay (no provinceToCodes) para
+  // reconocer también las provincias que no tienen ningún municipio
+  // vinculado en la tabla `municipalities`.
+  const provKeys = [...index.provinceDisplay.keys()].sort((a, b) => b.length - a.length);
   for (const key of provKeys) {
     if (consume(key)) provinces.set(index.provinceDisplay.get(key) ?? key, key);
   }

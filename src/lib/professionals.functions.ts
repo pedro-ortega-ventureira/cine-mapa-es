@@ -44,15 +44,41 @@ async function assertAdmin(ctx: { supabase: any; userId: string }) {
   if (error || !data) throw new Error("Forbidden: admin only");
 }
 
+// A partir de aquí las operaciones usan supabaseAdmin (service_role), no el
+// cliente autenticado del propio admin. Motivo: email/phone/nif_cif nunca
+// tuvieron GRANT SELECT para el rol `authenticated` (ni siquiera antes del
+// endurecimiento de seguridad del 18/07) porque Postgres no puede condicionar
+// un GRANT de columna a "solo si tiene el rol admin" — eso solo lo hacen las
+// políticas RLS a nivel de fila. Como el admin ya se valida arriba con
+// assertAdmin(), es seguro usar aquí el cliente con la service role.
+async function getAdminClient() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
+export const listProfessionalsAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ search: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const db = await getAdminClient();
+    let q = db.from("professionals").select("*").order("date_joined", { ascending: false }).limit(200);
+    if (data.search) q = q.ilike("full_name", `%${data.search}%`);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 export const upsertProfessional = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => professionalInputSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const db = await getAdminClient();
     const payload: any = { ...data, email: data.email || null };
     const { data: row, error } = data.id
-      ? await context.supabase.from("professionals").update(payload).eq("id", data.id).select().single()
-      : await context.supabase.from("professionals").insert(payload).select().single();
+      ? await db.from("professionals").update(payload).eq("id", data.id).select().single()
+      : await db.from("professionals").insert(payload).select().single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -62,7 +88,8 @@ export const deleteProfessional = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase.from("professionals").delete().eq("id", data.id);
+    const db = await getAdminClient();
+    const { error } = await db.from("professionals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -74,7 +101,8 @@ export const setVerified = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const db = await getAdminClient();
+    const { error } = await db
       .from("professionals")
       .update({ verified: data.verified })
       .eq("id", data.id);
@@ -101,6 +129,7 @@ export const importProfessionals = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const db = await getAdminClient();
     const slugify = (s: string) =>
       s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
 
@@ -116,7 +145,7 @@ export const importProfessionals = createServerFn({ method: "POST" })
           const cp = r.raw_postal_code.padStart(5, "0");
           const provCode = cp.slice(0, 2);
           // best-effort: look up by CP via municipalities.postal_codes if populated
-          const { data: found } = await context.supabase
+          const { data: found } = await db
             .from("municipalities")
             .select("code")
             .contains("postal_codes", [cp])
@@ -132,7 +161,7 @@ export const importProfessionals = createServerFn({ method: "POST" })
         // Upsert by email if present, else insert
         let existing: any = null;
         if (r.email) {
-          const { data: e } = await context.supabase
+          const { data: e } = await db
             .from("professionals")
             .select("id")
             .eq("email", r.email)
@@ -151,14 +180,14 @@ export const importProfessionals = createServerFn({ method: "POST" })
         };
 
         if (existing) {
-          const { error } = await context.supabase
+          const { error } = await db
             .from("professionals")
             .update(payload)
             .eq("id", existing.id);
           if (error) throw error;
           updated++;
         } else {
-          const { error } = await context.supabase
+          const { error } = await db
             .from("professionals")
             .insert({ ...payload, slug });
           if (error) throw error;
@@ -170,7 +199,7 @@ export const importProfessionals = createServerFn({ method: "POST" })
       }
     }
 
-    await context.supabase.from("import_logs").insert({
+    await db.from("import_logs").insert({
       filename: data.filename ?? null,
       rows_inserted: inserted,
       rows_updated: updated,
@@ -204,11 +233,12 @@ export const upsertFilmography = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const db = await getAdminClient();
     const { id, ...rest } = data;
     const payload: any = rest;
     const { data: row, error } = id
-      ? await context.supabase.from("filmography_items").update(payload).eq("id", id).select().single()
-      : await context.supabase.from("filmography_items").insert(payload).select().single();
+      ? await db.from("filmography_items").update(payload).eq("id", id).select().single()
+      : await db.from("filmography_items").insert(payload).select().single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -218,7 +248,8 @@ export const deleteFilmography = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase.from("filmography_items").delete().eq("id", data.id);
+    const db = await getAdminClient();
+    const { error } = await db.from("filmography_items").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -229,7 +260,8 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { data: pending, error } = await context.supabase
+    const db = await getAdminClient();
+    const { data: pending, error } = await db
       .from("professionals")
       .select("id, raw_postal_code, tags")
       .is("municipality_code", null)
@@ -241,7 +273,7 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
     for (const p of pending ?? []) {
       const cp = String((p as any).raw_postal_code || "").padStart(5, "0");
       if (!/^\d{5}$/.test(cp)) { missing++; continue; }
-      const { data: matches } = await context.supabase
+      const { data: matches } = await db
         .from("municipalities")
         .select("code")
         .contains("postal_codes", [cp])
@@ -252,11 +284,11 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
       }
       if (matches.length > 1) {
         const tags = Array.from(new Set([...(((p as any).tags as string[]) ?? []), "revisar-cp"]));
-        await context.supabase.from("professionals").update({ tags }).eq("id", (p as any).id);
+        await db.from("professionals").update({ tags }).eq("id", (p as any).id);
         ambiguous++;
         continue;
       }
-      await context.supabase
+      await db
         .from("professionals")
         .update({ municipality_code: matches[0].code })
         .eq("id", (p as any).id);
@@ -270,7 +302,8 @@ export const bulkVerifyAll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { data, error } = await context.supabase
+    const db = await getAdminClient();
+    const { data, error } = await db
       .from("professionals")
       .update({ verified: true })
       .eq("verified", false)

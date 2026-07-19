@@ -14,7 +14,12 @@ export const resolveProfessionalGeo = createServerFn({ method: "POST" })
     if (roleErr) throw new Error(roleErr.message);
     if (!isAdmin) throw new Error("Forbidden: admin only");
 
-    const { data: pros, error: readErr } = await context.supabase
+    // service_role: el rol authenticated nunca tuvo GRANT de escritura sobre
+    // professionals, y el admin ya quedó validado justo arriba.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin;
+
+    const { data: pros, error: readErr } = await db
       .from("professionals")
       .select("id, raw_postal_code");
     if (readErr) throw new Error(readErr.message);
@@ -117,7 +122,7 @@ export const resolveProfessionalGeo = createServerFn({ method: "POST" })
     // Evitamos upsert masivo para no requerir permisos adicionales.
     let updated = 0;
     for (const r of resolved) {
-      const { error: upErr } = await context.supabase
+      const { error: upErr } = await db
         .from("professionals")
         .update({
           geo_lat: r.geo_lat,

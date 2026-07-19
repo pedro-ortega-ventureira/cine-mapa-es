@@ -7,6 +7,7 @@ export function SiteHeader() {
     { to: "/", label: "Inicio" },
     { to: "/directorio", label: "Directorio" },
     { to: "/mapa", label: "Mapa" },
+    { to: "/registro", label: "Únete" },
     { to: "/admin", label: "Admin" },
   ] as const;
   return (

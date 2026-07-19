@@ -48,10 +48,17 @@ function Home() {
   const statsQ = useQuery({
     queryKey: ["home-stats"],
     queryFn: async () => {
+      // Importante: pedir "*" aquí falla en silencio para el rol anónimo,
+      // que solo tiene permiso de lectura sobre columnas concretas de
+      // `professionals` (no la tabla entera) — al pedir todas las columnas
+      // Postgres deniega el permiso y el contador se queda a 0. Pedimos un
+      // único campo que sí está permitido.
       const [pros, muni] = await Promise.all([
-        supabase.from("professionals").select("*", { count: "exact", head: true }).eq("verified", true),
-        supabase.from("municipalities").select("*", { count: "exact", head: true }).lt("population", 20000),
+        supabase.from("professionals").select("id", { count: "exact", head: true }).eq("verified", true),
+        supabase.from("municipalities").select("code", { count: "exact", head: true }).lt("population", 20000),
       ]);
+      if (pros.error) throw pros.error;
+      if (muni.error) throw muni.error;
       return { professionals: pros.count ?? 0, municipalities: muni.count ?? 0 };
     },
   });
@@ -125,6 +132,7 @@ function Home() {
               </div>
               <Link
                 to="/directorio"
+                search={{ q: q.trim() || undefined }}
                 className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Explorar

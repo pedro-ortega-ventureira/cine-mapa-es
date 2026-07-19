@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -25,6 +26,11 @@ import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
 import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
 
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapaRoute = MapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/registro': typeof RegistroRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/registro': typeof RegistroRoute
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
   '/admin/importar': typeof AuthenticatedAdminImportarRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/registro': typeof RegistroRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/directorio'
     | '/mapa'
+    | '/registro'
     | '/admin'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/directorio'
     | '/mapa'
+    | '/registro'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
     | '/admin/importar'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/directorio'
     | '/mapa'
+    | '/registro'
     | '/_authenticated/admin'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DirectorioRoute: typeof DirectorioRoute
   MapaRoute: typeof MapaRoute
+  RegistroRoute: typeof RegistroRoute
   MunicipiosCodigoRoute: typeof MunicipiosCodigoRoute
   ProfesionalesSlugRoute: typeof ProfesionalesSlugRoute
   ApiPublicSeedMunicipalitiesRoute: typeof ApiPublicSeedMunicipalitiesRoute
@@ -220,6 +233,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mapa': {
       id: '/mapa'
       path: '/mapa'
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DirectorioRoute: DirectorioRoute,
   MapaRoute: MapaRoute,
+  RegistroRoute: RegistroRoute,
   MunicipiosCodigoRoute: MunicipiosCodigoRoute,
   ProfesionalesSlugRoute: ProfesionalesSlugRoute,
   ApiPublicSeedMunicipalitiesRoute: ApiPublicSeedMunicipalitiesRoute,
@@ -371,3 +392,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
