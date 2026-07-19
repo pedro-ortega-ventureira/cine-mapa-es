@@ -223,8 +223,10 @@ export type Database = {
           slug: string
           social_links: Json | null
           tags: string[] | null
+          tmdb_person_id: number | null
           union_membership: string | null
           updated_at: string
+          user_id: string | null
           verified: boolean
           website: string | null
           willing_to_travel: boolean | null
@@ -264,8 +266,10 @@ export type Database = {
           slug: string
           social_links?: Json | null
           tags?: string[] | null
+          tmdb_person_id?: number | null
           union_membership?: string | null
           updated_at?: string
+          user_id?: string | null
           verified?: boolean
           website?: string | null
           willing_to_travel?: boolean | null
@@ -305,8 +309,10 @@ export type Database = {
           slug?: string
           social_links?: Json | null
           tags?: string[] | null
+          tmdb_person_id?: number | null
           union_membership?: string | null
           updated_at?: string
+          user_id?: string | null
           verified?: boolean
           website?: string | null
           willing_to_travel?: boolean | null

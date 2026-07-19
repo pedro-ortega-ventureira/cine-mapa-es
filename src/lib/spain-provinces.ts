@@ -70,3 +70,84 @@ export function normalizePostalCode(raw: string | null | undefined): string | nu
   if (!PROVINCE_BY_CP2[prefix]) return null; // fuera de rango España
   return padded;
 }
+
+// Nombre de provincia (según PROVINCE_BY_CP2) a partir de un código postal,
+// sea cual sea su formato de entrada (con o sin ceros a la izquierda,
+// espacios, etc.). Devuelve null si no es un CP español reconocible.
+export function provinceForPostalCode(raw: string | null | undefined): string | null {
+  const cp = normalizePostalCode(raw);
+  if (!cp) return null;
+  return PROVINCE_BY_CP2[cp.slice(0, 2)]?.name ?? null;
+}
+
+// Mapa provincia -> comunidad autónoma (o ciudad autónoma). Los nombres de
+// comunidad coinciden exactamente con AUTONOMOUS_COMMUNITIES en constants.ts.
+export const PROVINCE_TO_CCAA: Record<string, string> = {
+  Almería: "Andalucía",
+  Cádiz: "Andalucía",
+  Córdoba: "Andalucía",
+  Granada: "Andalucía",
+  Huelva: "Andalucía",
+  Jaén: "Andalucía",
+  Málaga: "Andalucía",
+  Sevilla: "Andalucía",
+  Huesca: "Aragón",
+  Teruel: "Aragón",
+  Zaragoza: "Aragón",
+  Asturias: "Asturias",
+  "Illes Balears": "Baleares",
+  "Las Palmas": "Canarias",
+  "Santa Cruz de Tenerife": "Canarias",
+  Cantabria: "Cantabria",
+  Albacete: "Castilla-La Mancha",
+  "Ciudad Real": "Castilla-La Mancha",
+  Cuenca: "Castilla-La Mancha",
+  Guadalajara: "Castilla-La Mancha",
+  Toledo: "Castilla-La Mancha",
+  Ávila: "Castilla y León",
+  Burgos: "Castilla y León",
+  León: "Castilla y León",
+  Palencia: "Castilla y León",
+  Salamanca: "Castilla y León",
+  Segovia: "Castilla y León",
+  Soria: "Castilla y León",
+  Valladolid: "Castilla y León",
+  Zamora: "Castilla y León",
+  Barcelona: "Cataluña",
+  Girona: "Cataluña",
+  Lleida: "Cataluña",
+  Tarragona: "Cataluña",
+  Badajoz: "Extremadura",
+  Cáceres: "Extremadura",
+  "A Coruña": "Galicia",
+  Lugo: "Galicia",
+  Ourense: "Galicia",
+  Pontevedra: "Galicia",
+  "La Rioja": "La Rioja",
+  Madrid: "Madrid",
+  Murcia: "Murcia",
+  Navarra: "Navarra",
+  Álava: "País Vasco",
+  Gipuzkoa: "País Vasco",
+  Bizkaia: "País Vasco",
+  Alicante: "Valencia",
+  Castellón: "Valencia",
+  Valencia: "Valencia",
+  Ceuta: "Ceuta",
+  Melilla: "Melilla",
+};
+
+// Comunidad autónoma a partir de un código postal (vía provincia).
+export function ccaaForPostalCode(raw: string | null | undefined): string | null {
+  const prov = provinceForPostalCode(raw);
+  if (!prov) return null;
+  return PROVINCE_TO_CCAA[prov] ?? null;
+}
+
+// Listado de las 52 provincias españolas, ordenado alfabéticamente. Se usa
+// para el desplegable de "Provincia" del directorio: al venir directamente
+// de esta tabla (y no de datos importados), siempre está completo y no
+// depende de que la tabla `municipalities` tenga la provincia bien rellena.
+export const PROVINCE_NAMES: string[] = Object.values(PROVINCE_BY_CP2)
+  .map((p) => p.name)
+  .sort((a, b) => a.localeCompare(b, "es"));

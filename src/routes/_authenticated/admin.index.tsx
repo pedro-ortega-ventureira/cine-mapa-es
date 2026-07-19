@@ -34,11 +34,17 @@ function Dashboard() {
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
+      // "id" en vez de "*": el rol autenticado solo tiene permiso de lectura
+      // sobre columnas concretas de `professionals` (no la tabla entera), y
+      // pedir "*" falla en silencio dejando los contadores a 0.
       const [total, verified, muniCount] = await Promise.all([
-        supabase.from("professionals").select("*", { count: "exact", head: true }),
-        supabase.from("professionals").select("*", { count: "exact", head: true }).eq("verified", true),
-        supabase.from("municipalities").select("*", { count: "exact", head: true }),
+        supabase.from("professionals").select("id", { count: "exact", head: true }),
+        supabase.from("professionals").select("id", { count: "exact", head: true }).eq("verified", true),
+        supabase.from("municipalities").select("code", { count: "exact", head: true }),
       ]);
+      if (total.error) throw total.error;
+      if (verified.error) throw verified.error;
+      if (muniCount.error) throw muniCount.error;
       return {
         total: total.count ?? 0,
         verified: verified.count ?? 0,
