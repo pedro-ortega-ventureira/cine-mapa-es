@@ -32,6 +32,14 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          <a
+            href="https://españalatente.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          >
+            España Latente
+          </a>
         </nav>
       </div>
     </header>
