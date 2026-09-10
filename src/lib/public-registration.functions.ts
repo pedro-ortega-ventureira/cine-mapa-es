@@ -21,10 +21,14 @@ async function getAdminClient() {
 const slugify = (s: string) =>
   s
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .toLowerCase();
+
+// Umbral de la regla de negocio: el directorio solo admite profesionales
+// residentes en municipios de menos de 20.000 habitantes.
+export const MAX_MUNICIPALITY_POPULATION = 20000;
 
 const publicProfessionalInputSchema = z.object({
   full_name: z.string().min(1),
@@ -54,6 +58,42 @@ const publicProfessionalInputSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+// El municipio es OBLIGATORIO para darse de alta: la base de datos tiene el
+// trigger `trg_municipio_menor_20k`, que aborta el INSERT si
+// `municipality_code` es NULL o si el municipio supera los 20.000 habitantes.
+// El formulario pedía escribir el código a mano en un campo opcional, así que
+// cualquier alta terminaba con la excepción cruda del trigger o con un error
+// de clave ajena — ningún registro público llegó nunca a completarse.
+// Aquí se resuelve el municipio antes de insertar y se devuelven mensajes
+// legibles en vez de dejar que reviente Postgres.
+// Nota: `postal_codes` está vacío en `municipalities`, así que el buscador del
+// formulario cruza por nombre y provincia. Si algún día se puebla (ver
+// /api/public/seed-postal-codes), la búsqueda por CP funcionará sin cambios.
+async function resolveMunicipality(db: any, code: string | null | undefined) {
+  if (!code) {
+    throw new Error(
+      "Elige tu municipio de residencia en el buscador: el directorio solo admite municipios de menos de 20.000 habitantes.",
+    );
+  }
+  const { data, error } = await db
+    .from("municipalities")
+    .select("code,name,province,population")
+    .eq("code", code)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error(
+      "No reconocemos ese municipio. Elígelo del buscador en lugar de escribirlo a mano.",
+    );
+  }
+  if ((data.population ?? 0) >= MAX_MUNICIPALITY_POPULATION) {
+    throw new Error(
+      `El directorio solo admite profesionales residentes en municipios de menos de ${MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes. ${data.name} (${data.province}) tiene ${(data.population ?? 0).toLocaleString("es-ES")}.`,
+    );
+  }
+  return data as { code: string; name: string; province: string; population: number };
+}
+
 export const getMyProfessional = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -82,24 +122,46 @@ export const registerProfessional = createServerFn({ method: "POST" })
       throw new Error("Ya tienes un perfil registrado. Edítalo en lugar de crear uno nuevo.");
     }
 
-    const baseSlug = slugify(data.full_name) || "profesional";
-    const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+    const municipality = await resolveMunicipality(db, data.municipality_code);
 
-    const payload: any = {
+    // Un slug puede colisionar (mismo nombre + mismos 4 caracteres al azar) y
+    // la columna es UNIQUE NOT NULL, así que se reintenta en vez de devolver
+    // un error de clave duplicada al usuario.
+    const baseSlug = slugify(data.full_name) || "profesional";
+
+    const basePayload: any = {
       ...data,
       email: data.email || null,
-      slug,
       user_id: context.userId,
-      // Publicación inmediata y abierta: sin cola de moderación.
+      municipality_code: municipality.code,
+      // Publicación inmediata y abierta: sin cola de moderación. El municipio
+      // ya está validado contra la regla de <20.000 habitantes.
       verified: true,
+      active: true,
+      exclusion_reason: null,
     };
-    const { data: row, error } = await db
-      .from("professionals")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return row;
+
+    let lastError: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+      const { data: row, error } = await db
+        .from("professionals")
+        .insert({ ...basePayload, slug })
+        .select()
+        .single();
+      if (!error) return row;
+      // 23505 = unique_violation. Si el conflicto es del slug, reintentamos;
+      // si es del índice de user_id, es que ya existe perfil para esta cuenta.
+      if (error.code === "23505" && String(error.message).includes("slug")) {
+        lastError = error.message;
+        continue;
+      }
+      if (error.code === "23505") {
+        throw new Error("Ya tienes un perfil registrado. Edítalo en lugar de crear uno nuevo.");
+      }
+      throw new Error(error.message);
+    }
+    throw new Error(lastError ?? "No se pudo generar una URL única para tu perfil.");
   });
 
 export const updateMyProfessional = createServerFn({ method: "POST" })
@@ -110,13 +172,22 @@ export const updateMyProfessional = createServerFn({ method: "POST" })
 
     const { data: existing, error: findError } = await db
       .from("professionals")
-      .select("id")
+      .select("id, verified")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (findError) throw new Error(findError.message);
     if (!existing) throw new Error("No tienes un perfil todavía. Regístrate primero.");
 
-    const payload: any = { ...data, email: data.email || null };
+    const municipality = await resolveMunicipality(db, data.municipality_code);
+
+    const payload: any = {
+      ...data,
+      email: data.email || null,
+      municipality_code: municipality.code,
+      verified: true,
+      active: true,
+      exclusion_reason: null,
+    };
     const { data: row, error } = await db
       .from("professionals")
       .update(payload)
