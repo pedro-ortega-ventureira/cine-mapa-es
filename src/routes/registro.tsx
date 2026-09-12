@@ -10,6 +10,7 @@ import {
   updateMyProfessional,
 } from "@/lib/public-registration.functions";
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
+import { postalCodeForLookup } from "@/lib/postal-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,11 +158,41 @@ function RegistroPage() {
     staleTime: 10 * 60_000,
   });
 
-  const municipalities = municipalitiesQ.data ?? [];
+  const municipalities = useMemo(() => municipalitiesQ.data ?? [], [municipalitiesQ.data]);
+
+  // La API de Supabase pagina las respuestas grandes, por lo que el listado
+  // general no es fiable para resolver un CP. Se consulta el CP exacto en la
+  // base de datos para que municipios de cualquier letra se puedan encontrar.
+  const postalCode = postalCodeForLookup(form.raw_postal_code);
+  const cpMatchesQ = useQuery({
+    queryKey: ["municipalities-by-postal-code", postalCode],
+    enabled: postalCode !== null,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("municipalities")
+        .select("code,name,province,population,postal_codes")
+        .lt("population", MAX_MUNICIPALITY_POPULATION)
+        .contains("postal_codes", [postalCode!])
+        .order("name");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as MunicipalityLite[];
+    },
+    staleTime: 10 * 60_000,
+  });
+
+  const cpMatches = useMemo(() => cpMatchesQ.data ?? [], [cpMatchesQ.data]);
+
+  const availableMunicipalities = useMemo(() => {
+    const byCode = new Map(
+      municipalities.map((municipality) => [municipality.code, municipality]),
+    );
+    cpMatches.forEach((municipality) => byCode.set(municipality.code, municipality));
+    return Array.from(byCode.values());
+  }, [municipalities, cpMatches]);
 
   const selectedMunicipality = useMemo(
-    () => municipalities.find((m) => m.code === form.municipality_code) ?? null,
-    [municipalities, form.municipality_code],
+    () => availableMunicipalities.find((m) => m.code === form.municipality_code) ?? null,
+    [availableMunicipalities, form.municipality_code],
   );
 
   const munMatches = useMemo(() => {
@@ -178,16 +209,6 @@ function RegistroPage() {
     }
     return out;
   }, [municipalities, munQuery]);
-
-  // Municipios cuyo código postal coincide EXACTAMENTE con el CP introducido.
-  // No todos los municipios tienen código postal cargado (dataset externo
-  // incompleto), así que esto solo cubre una parte de los casos: cuando no
-  // hay coincidencia el buscador por nombre de más abajo sigue disponible.
-  const cpMatches = useMemo(() => {
-    const cp = form.raw_postal_code.trim();
-    if (!/^\d{5}$/.test(cp)) return [];
-    return municipalities.filter((m) => (m.postal_codes ?? []).includes(cp));
-  }, [municipalities, form.raw_postal_code]);
 
   // Autorrelleno: si el código postal identifica un único municipio elegible,
   // se selecciona solo. Si el usuario ya había elegido uno a mano, no se toca
