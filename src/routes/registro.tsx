@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -188,23 +188,62 @@ function RegistroPage() {
     return municipalities.filter((m) => (m.postal_codes ?? []).includes(cp));
   }, [municipalities, form.raw_postal_code]);
 
-  // Autorrelleno: si el código postal identifica un único municipio elegible,
-  // se selecciona solo. Si el usuario ya había elegido uno a mano, no se toca
-  // (evita pisar una elección manual al seguir escribiendo el CP). Si el CP
-  // deja de identificar ese municipio (typo corregido), se limpia la
-  // selección automática para no dejar un municipio equivocado seleccionado.
+  // Cada vez que CAMBIA el código postal se vuelve a resolver el municipio,
+  // venga de donde venga la selección anterior (automática o elegida a mano).
+  // Antes una elección manual quedaba congelada aunque después se escribiera un
+  // CP de otra provincia, que es como se colaron fichas con el municipio y el
+  // CP en sitios distintos.
+  //
+  // El listado de códigos postales está incompleto (1,8 de media por municipio),
+  // así que un CP sin coincidencias NO borra nada: sólo avisa. Borrar ahí se
+  // cargaría selecciones correctas continuamente.
+  const cpResuelto = useRef<string | null>(null);
+
   useEffect(() => {
-    if (form.municipality_code && !autoFilledFromCp) return;
-    if (cpMatches.length === 1) {
-      if (cpMatches[0].code !== form.municipality_code) {
-        setForm((f) => ({ ...f, municipality_code: cpMatches[0].code }));
+    // Hasta que no está cargado el listado no se puede resolver nada.
+    if (municipalities.length === 0) return;
+
+    const cp = form.raw_postal_code.trim();
+
+    if (!/^\d{5}$/.test(cp)) {
+      // CP incompleto o borrado: se suelta lo que hubiera puesto el propio CP.
+      if (autoFilledFromCp) {
+        setForm((f) => ({ ...f, municipality_code: "" }));
+        setAutoFilledFromCp(false);
       }
+      cpResuelto.current = null;
+      return;
+    }
+
+    // Ya resuelto para este CP: no repetir en cada tecleo de otro campo.
+    if (cpResuelto.current === cp) return;
+    cpResuelto.current = cp;
+
+    // CP que no figura en el listado: no tocamos la selección (ver arriba).
+    if (cpMatches.length === 0) return;
+
+    // El municipio elegido ya es uno de los de este CP: nada que cambiar.
+    if (cpMatches.some((m) => m.code === form.municipality_code)) return;
+
+    if (cpMatches.length === 1) {
+      setForm((f) => ({ ...f, municipality_code: cpMatches[0].code }));
       setAutoFilledFromCp(true);
-    } else if (autoFilledFromCp) {
+    } else {
+      // Varios municipios comparten el CP: se suelta la selección para que la
+      // lista de abajo obligue a elegir entre los de ese código.
       setForm((f) => ({ ...f, municipality_code: "" }));
       setAutoFilledFromCp(false);
+      setMunQuery("");
     }
-  }, [cpMatches, form.municipality_code, autoFilledFromCp]);
+  }, [municipalities, cpMatches, form.raw_postal_code, form.municipality_code, autoFilledFromCp]);
+
+  // El CP introducido no figura en el listado del municipio elegido: puede ser
+  // una errata, o simplemente que al municipio le falten códigos.
+  const cpNoCuadra =
+    /^\d{5}$/.test(form.raw_postal_code.trim()) &&
+    cpMatches.length > 0 &&
+    !!form.municipality_code &&
+    !cpMatches.some((m) => m.code === form.municipality_code);
 
   const getMineFn = useServerFn(getMyProfessional);
   const registerFn = useServerFn(registerProfessional);
@@ -222,6 +261,11 @@ function RegistroPage() {
       try {
         const row = await getMineFn();
         setExisting(row);
+        // Se da por resuelto el CP que ya tenía guardado, para que abrir el
+        // perfil no le cambie el municipio por su cuenta: la resolución sólo
+        // debe dispararse cuando la persona toca el código postal.
+        cpResuelto.current = row?.raw_postal_code?.trim() || null;
+        setAutoFilledFromCp(false);
         setForm(row ? rowToForm(row) : { ...emptyForm, email: session.user?.email ?? "" });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "No se pudo cargar tu perfil");
@@ -507,6 +551,12 @@ function RegistroPage() {
             <p className="text-xs text-muted-foreground mt-1">
               Si lo reconocemos, rellenamos tu municipio automáticamente. Si no, elígelo abajo.
             </p>
+            {cpNoCuadra && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                Ese código postal no figura en el municipio que tienes elegido. Revisa cuál de los
+                dos es el bueno.
+              </p>
+            )}
           </div>
           <div>
             <Label>Municipio de residencia *</Label>

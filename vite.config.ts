@@ -53,7 +53,8 @@ export default defineConfig(async ({ mode, command }) => {
 
   return {
     define,
-    css: { transformer: "lightningcss" },
+    // "as const" para que el tipo sea el literal que espera Vite y no `string`.
+    css: { transformer: "lightningcss" as const },
     resolve: {
       alias: { "@": path.resolve(process.cwd(), "src") },
       // Una segunda copia de React o del query client rompe los hooks.
