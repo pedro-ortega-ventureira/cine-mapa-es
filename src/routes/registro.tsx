@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import {
   getMyProfessional,
   registerProfessional,
@@ -265,13 +264,6 @@ function RegistroPage() {
     }
   }
 
-  async function signInGoogle() {
-    const r = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/registro",
-    });
-    if (r.error) toast.error("No se pudo iniciar sesión con Google");
-  }
-
   function toggleArrayField(field: "secondary_roles" | "production_types", value: string) {
     setForm((f) => {
       const arr = f[field];
@@ -402,9 +394,6 @@ function RegistroPage() {
           </div>
           <Button type="submit" disabled={authLoading} className="w-full">
             {authLoading ? "…" : authMode === "signin" ? "Entrar" : "Crear cuenta y continuar"}
-          </Button>
-          <Button type="button" variant="outline" onClick={signInGoogle} className="w-full">
-            Continuar con Google
           </Button>
           <button
             type="button"

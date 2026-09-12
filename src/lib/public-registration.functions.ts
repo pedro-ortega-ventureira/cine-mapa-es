@@ -66,9 +66,12 @@ const publicProfessionalInputSchema = z.object({
 // de clave ajena — ningún registro público llegó nunca a completarse.
 // Aquí se resuelve el municipio antes de insertar y se devuelven mensajes
 // legibles en vez de dejar que reviente Postgres.
-// Nota: `postal_codes` está vacío en `municipalities`, así que el buscador del
-// formulario cruza por nombre y provincia. Si algún día se puebla (ver
-// /api/public/seed-postal-codes), la búsqueda por CP funcionará sin cambios.
+// Nota: `postal_codes` ya está poblado en `municipalities` (11.005 códigos, 1,8
+// de media por municipio), así que el buscador del formulario cruza también por
+// CP. Ojo: el listado es incompleto —11 municipios no tienen ninguno y 2.271
+// códigos aparecen en más de un municipio—, de modo que el autorrelleno por CP
+// sólo acierta cuando el código identifica un único municipio; en el resto de
+// casos hay que elegir a mano.
 async function resolveMunicipality(db: any, code: string | null | undefined) {
   if (!code) {
     throw new Error(
