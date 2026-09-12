@@ -537,7 +537,9 @@ function RegistroPage() {
               maxLength={5}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Si lo reconocemos, rellenamos tu municipio automáticamente. Si no, elígelo abajo.
+              Introduce tu código postal. Si corresponde a un único municipio rural, lo
+              seleccionaremos automáticamente; si lo comparten varios, podrás elegir el tuyo en
+              la lista.
             </p>
           </div>
           <div>
