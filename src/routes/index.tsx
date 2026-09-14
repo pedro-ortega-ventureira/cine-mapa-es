@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { colorForRole } from "@/lib/roles";
 import { Input } from "@/components/ui/input";
 import { Search, Users, MapPin, Film } from "lucide-react";
+import { fetchAllRows } from "@/lib/fetch-all";
 
 const MunicipalitiesChoroplethMap = lazy(() =>
   import("@/components/MunicipalitiesChoroplethMap").then((m) => ({
@@ -31,13 +32,19 @@ function Home() {
   const overlaysQ = useQuery({
     queryKey: ["municipality_overlays"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("municipality_stats" as any)
-        .select("code,professionals_count,verified_count")
-        .gt("professionals_count", 0)
-        .limit(20000);
-      if (error) throw error;
-      return ((data ?? []) as unknown as OverlayRow[]).map((r) => ({
+      // `.limit(20000)` no levantaba el tope de 1.000 filas de PostgREST
+      // (ver src/lib/fetch-all.ts). Hoy son 71 municipios con fichas, así que
+      // no truncaba todavía; al pasar de mil habría dejado de pintar el mapa
+      // entero sin dar ningún error.
+      const data = await fetchAllRows<OverlayRow>((from, to) =>
+        supabase
+          .from("municipality_stats" as any)
+          .select("code,professionals_count,verified_count")
+          .gt("professionals_count", 0)
+          .order("code")
+          .range(from, to) as any,
+      );
+      return (data as unknown as OverlayRow[]).map((r) => ({
         code: r.code,
         professionals_count: r.professionals_count ?? 0,
         verified_count: r.verified_count ?? 0,
@@ -79,16 +86,17 @@ function Home() {
   const mapProsQ = useQuery({
     queryKey: ["verified-pros-map"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("professionals")
-        .select("id,slug,full_name,primary_role,postal_code:raw_postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
-        .eq("verified", true)
-        .eq("geo_accuracy", "exact")
-        .not("geo_lat", "is", null)
-        .not("geo_lng", "is", null)
-        .limit(5000);
-      if (error) throw error;
-      return (data ?? []) as any[];
+      return await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("professionals")
+          .select("id,slug,full_name,primary_role,postal_code:raw_postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
+          .eq("verified", true)
+          .eq("geo_accuracy", "exact")
+          .not("geo_lat", "is", null)
+          .not("geo_lng", "is", null)
+          .order("id")
+          .range(from, to) as any,
+      );
     },
   });
 

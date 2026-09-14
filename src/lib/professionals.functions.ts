@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { fetchAllRows } from "@/lib/fetch-all";
 
 const professionalInputSchema = z.object({
   id: z.string().uuid().optional(),
@@ -261,13 +262,19 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const db = await getAdminClient();
-    const { data: pending, error } = await db
-      .from("professionals")
-      .select("id, raw_postal_code, tags")
-      .is("municipality_code", null)
-      .not("raw_postal_code", "is", null)
-      .limit(2000);
-    if (error) throw new Error(error.message);
+    // El cliente de service_role también pasa por PostgREST, así que también
+    // se come el tope de 1.000 filas: `.limit(2000)` habría dejado fichas sin
+    // procesar en silencio y el recuento del informe habría mentido.
+    const pending = await fetchAllRows<{ id: string; raw_postal_code: string | null; tags: string[] | null }>(
+      (from, to) =>
+        db
+          .from("professionals")
+          .select("id, raw_postal_code, tags")
+          .is("municipality_code", null)
+          .not("raw_postal_code", "is", null)
+          .order("id")
+          .range(from, to) as any,
+    );
 
     let resolved = 0, ambiguous = 0, missing = 0;
     for (const p of pending ?? []) {

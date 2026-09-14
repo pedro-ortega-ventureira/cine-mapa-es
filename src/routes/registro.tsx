@@ -31,8 +31,15 @@ const selectClass = "w-full rounded-md border border-input px-2 py-2 text-sm bg-
 // tabla `municipalities`, sin datos externos.
 const MAX_MUNICIPALITY_POPULATION = 20000;
 
-const normalize = (s: string) =>
-  s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// Retarda el valor para no lanzar una consulta por cada tecla pulsada.
+function useDebounced<T>(value: T, ms: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
 
 type MunicipalityLite = {
   code: string;
@@ -141,24 +148,43 @@ function RegistroPage() {
   const [munQuery, setMunQuery] = useState("");
   const [autoFilledFromCp, setAutoFilledFromCp] = useState(false);
 
-  // Listado de municipios elegibles (<20.000 hab.). Se filtra en cliente para
-  // poder buscar sin acentos, igual que hace /directorio.
-  const municipalitiesQ = useQuery({
-    queryKey: ["municipalities-rural"],
+  // La búsqueda se resuelve en la base de datos, no en el navegador.
+  //
+  // Antes esto se descargaba el listado de municipios elegibles y filtraba en
+  // cliente. Pero PostgREST corta TODA respuesta en 1.000 filas y `.limit()`
+  // no levanta ese tope: es del servidor. Ordenado por nombre, el formulario
+  // solo conocía de "Ababuj" a "Beleña" — 1.000 de los 7.718 elegibles. El 87%
+  // de los municipios del directorio era inseleccionable y no fallaba nada: la
+  // respuesta llegaba truncada, callada y plausible.
+  //
+  // `search_municipalities` busca contra un índice trigram, aplica la regla de
+  // los 20.000 habitantes en el servidor y encuentra los 544 municipios que el
+  // INE escribe con el artículo pospuesto ("Pesquera (La)") también como los
+  // escribe la gente ("La Pesquera").
+  const munQueryDebounced = useDebounced(munQuery.trim(), 250);
+
+  const munMatchesQ = useQuery({
+    queryKey: ["municipalities-search", munQueryDebounced],
+    enabled: munQueryDebounced.length >= 2,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("municipalities")
-        .select("code,name,province,population,postal_codes")
-        .lt("population", MAX_MUNICIPALITY_POPULATION)
-        .order("name")
-        .limit(20000);
+      const { data, error } = await supabase.rpc("search_municipalities", {
+        _q: munQueryDebounced,
+        _limit: 30,
+      });
       if (error) throw new Error(error.message);
       return (data ?? []) as MunicipalityLite[];
     },
-    staleTime: 10 * 60_000,
+    staleTime: 5 * 60_000,
   });
 
-  const municipalities = useMemo(() => municipalitiesQ.data ?? [], [municipalitiesQ.data]);
+  const munMatches = useMemo(() => munMatchesQ.data ?? [], [munMatchesQ.data]);
+
+  // "Buscando…" también durante los 250 ms de retardo: si no, entre la última
+  // tecla y el disparo de la consulta se vería un "ningún municipio coincide"
+  // que es mentira.
+  const buscandoMunicipios =
+    munQuery.trim().length >= 2 &&
+    (munMatchesQ.isFetching || munQuery.trim() !== munQueryDebounced);
 
   // La API de Supabase pagina las respuestas grandes, por lo que el listado
   // general no es fiable para resolver un CP. Se consulta el CP exacto en la
@@ -182,33 +208,27 @@ function RegistroPage() {
 
   const cpMatches = useMemo(() => cpMatchesQ.data ?? [], [cpMatchesQ.data]);
 
-  const availableMunicipalities = useMemo(() => {
-    const byCode = new Map(
-      municipalities.map((municipality) => [municipality.code, municipality]),
-    );
-    cpMatches.forEach((municipality) => byCode.set(municipality.code, municipality));
-    return Array.from(byCode.values());
-  }, [municipalities, cpMatches]);
+  // Ya no hay listado completo en memoria, así que el municipio seleccionado
+  // puede no estar ni en los resultados de la búsqueda ni en los del código
+  // postal (por ejemplo al abrir un perfil ya guardado): se pide por su código.
+  const selectedMunicipalityQ = useQuery({
+    queryKey: ["municipality", form.municipality_code],
+    enabled: !!form.municipality_code,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("municipalities")
+        .select("code,name,province,population,postal_codes")
+        .eq("code", form.municipality_code)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data ?? null) as MunicipalityLite | null;
+    },
+    staleTime: 30 * 60_000,
+  });
 
-  const selectedMunicipality = useMemo(
-    () => availableMunicipalities.find((m) => m.code === form.municipality_code) ?? null,
-    [availableMunicipalities, form.municipality_code],
-  );
-
-  const munMatches = useMemo(() => {
-    const q = normalize(munQuery);
-    if (q.length < 2) return [];
-    const isCp = /^\d{4,5}$/.test(q);
-    const out: MunicipalityLite[] = [];
-    for (const m of municipalities) {
-      const hit = isCp
-        ? (m.postal_codes ?? []).some((cp) => cp.startsWith(q))
-        : normalize(m.name).includes(q) || normalize(m.province).includes(q);
-      if (hit) out.push(m);
-      if (out.length >= 30) break;
-    }
-    return out;
-  }, [municipalities, munQuery]);
+  const selectedMunicipality = form.municipality_code
+    ? (selectedMunicipalityQ.data ?? null)
+    : null;
 
   // Autorrelleno: si el código postal identifica un único municipio elegible,
   // se selecciona solo. Si el usuario ya había elegido uno a mano, no se toca
@@ -596,10 +616,10 @@ function RegistroPage() {
                 />
                 {munQuery.trim().length >= 2 && (
                   <div className="mt-1 max-h-56 overflow-auto rounded-md border divide-y">
-                    {municipalitiesQ.isLoading && (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">Cargando municipios…</p>
+                    {buscandoMunicipios && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">Buscando municipios…</p>
                     )}
-                    {!municipalitiesQ.isLoading && munMatches.length === 0 && (
+                    {!buscandoMunicipios && munMatches.length === 0 && (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
                         Ningún municipio de menos de{" "}
                         {MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes coincide.

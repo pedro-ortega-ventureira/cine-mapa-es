@@ -383,6 +383,16 @@ export type Database = {
         Returns: boolean
       }
       increment_profile_views: { Args: { _slug: string }; Returns: undefined }
+      search_municipalities: {
+        Args: { _limit?: number; _q: string }
+        Returns: {
+          code: string
+          name: string
+          population: number
+          postal_codes: string[]
+          province: string
+        }[]
+      }
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number }
       seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number }
       set_professional_geo_batch: { Args: { _payload: Json }; Returns: number }

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetch-all";
 import { MapPin, ShieldCheck, HelpCircle } from "lucide-react";
 
 const ProfessionalsLeafletMap = lazy(() =>
@@ -53,15 +54,20 @@ function MapPage() {
   const q = useQuery({
     queryKey: ["map-professionals"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("professionals")
-        .select(
-          "id,slug,full_name,alias,photo_url,primary_role,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
-        )
-        .eq("verified", true)
-        .limit(5000);
-      if (error) throw error;
-      return (data ?? []) as unknown as Row[];
+      // Paginado: `.limit(5000)` no sube el tope de 1.000 filas de PostgREST
+      // (ver src/lib/fetch-all.ts). Con 117 fichas aún no truncaba, pero el
+      // mapa es justo lo que más crece.
+      const data = await fetchAllRows<Row>((from, to) =>
+        supabase
+          .from("professionals")
+          .select(
+            "id,slug,full_name,alias,photo_url,primary_role,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
+          )
+          .eq("verified", true)
+          .order("id")
+          .range(from, to) as any,
+      );
+      return data as unknown as Row[];
     },
   });
 

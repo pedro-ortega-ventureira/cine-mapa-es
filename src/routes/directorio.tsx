@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ProfessionalCard } from "@/components/ProfessionalCard";
 import { AUTONOMOUS_COMMUNITIES, PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
+import { fetchAllRows } from "@/lib/fetch-all";
 import { provinceForPostalCode, PROVINCE_TO_CCAA, PROVINCE_NAMES } from "@/lib/spain-provinces";
 import { Search, Grid3x3, List, X, Map as MapIcon, ChevronUp } from "lucide-react";
 import type { MapProfessional } from "@/components/ProfessionalsLeafletMap";
@@ -47,20 +48,31 @@ function Directorio() {
   const [q, setQ] = useState(search.q ?? "");
   const [mapOpen, setMapOpen] = useState(true);
 
+  // Esta consulta pedía los 8.112 municipios con `.limit(20000)` y recibía
+  // 1.000 (ver src/lib/fetch-all.ts): los profesionales de municipios
+  // posteriores a la "B" salían sin nombre de municipio, y filtrar por
+  // provincia o comunidad sólo encontraba los de la A y la B.
+  //
+  // Sólo hacen falta los municipios que tienen fichas —para ponerles nombre y
+  // para resolver los filtros—, así que se piden a `municipality_stats`, que ya
+  // lleva ese recuento. Hoy son 71 filas en vez de 8.112. La paginación queda
+  // igualmente por si algún día pasan de mil.
   const municipalitiesQ = useQuery({
-    queryKey: ["municipalities-lite-v2"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("municipalities")
-        .select("code,name,province,autonomous_community")
-        .limit(20000);
-      return (data ?? []) as Array<{
+    queryKey: ["municipalities-with-professionals"],
+    queryFn: () =>
+      fetchAllRows<{
         code: string;
         name: string;
         province: string;
         autonomous_community: string | null;
-      }>;
-    },
+      }>((from, to) =>
+        supabase
+          .from("municipality_stats" as any)
+          .select("code,name,province,autonomous_community")
+          .gt("professionals_count", 0)
+          .order("code")
+          .range(from, to) as any,
+      ),
     staleTime: 5 * 60_000,
   });
 
