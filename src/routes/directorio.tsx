@@ -9,8 +9,9 @@ import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
 import { fetchAllRows } from "@/lib/fetch-all";
 import { provinceForPostalCode, PROVINCE_TO_CCAA, PROVINCE_NAMES } from "@/lib/spain-provinces";
 import { Search, Grid3x3, List, X, Map as MapIcon, ChevronUp } from "lucide-react";
-import type { MapProfessional } from "@/components/ProfessionalsLeafletMap";
 import { z } from "zod";
+
+type MapProfessional = import("@/components/ProfessionalsLeafletMap").MapProfessional;
 
 const ProfessionalsLeafletMap = lazy(() =>
   import("@/components/ProfessionalsLeafletMap").then((m) => ({ default: m.ProfessionalsLeafletMap })),
