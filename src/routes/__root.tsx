@@ -13,6 +13,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getSupabasePublicConfig,
+  serializeSupabasePublicConfig,
+} from "@/integrations/supabase/public-config";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -118,10 +122,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const publicConfigScript = serializeSupabasePublicConfig(getSupabasePublicConfig());
+
   return (
     <html lang="es">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: publicConfigScript }} />
       </head>
       <body>
         {children}
