@@ -7,6 +7,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Film } from "lucide-react";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
+import {
+  afterPasswordRecoveryUpdate,
+  afterSignUp,
+  SIGNUP_CONFIRM_MESSAGE,
+} from "@/lib/auth-flow";
+
 import { validateAuthSearch } from "@/lib/auth-search";
 
 export const Route = createFileRoute("/auth")({
@@ -33,6 +39,8 @@ function AuthPage() {
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
+  const [signupPending, setSignupPending] = useState(false);
+
 
   useEffect(() => {
     if (recovery) setRecoveryMode(true);
