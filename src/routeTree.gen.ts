@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as DirectorioRouteImport } from './routes/directorio'
-import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -40,11 +39,6 @@ const MapaRoute = MapaRouteImport.update({
 const DirectorioRoute = DirectorioRouteImport.update({
   id: '/directorio',
   path: '/directorio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/auth-callback',
-  path: '/auth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -120,7 +114,6 @@ const AuthenticatedAdminImportarRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/auth-callback': typeof AuthCallbackRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
   '/registro': typeof RegistroRoute
@@ -138,7 +131,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/auth-callback': typeof AuthCallbackRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
   '/registro': typeof RegistroRoute
@@ -157,7 +149,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/auth-callback': typeof AuthCallbackRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
   '/registro': typeof RegistroRoute
@@ -177,7 +168,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/auth-callback'
     | '/directorio'
     | '/mapa'
     | '/registro'
@@ -195,7 +185,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/auth-callback'
     | '/directorio'
     | '/mapa'
     | '/registro'
@@ -213,7 +202,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/auth-callback'
     | '/directorio'
     | '/mapa'
     | '/registro'
@@ -233,7 +221,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  AuthCallbackRoute: typeof AuthCallbackRoute
   DirectorioRoute: typeof DirectorioRoute
   MapaRoute: typeof MapaRoute
   RegistroRoute: typeof RegistroRoute
@@ -265,13 +252,6 @@ declare module '@tanstack/react-router' {
       path: '/directorio'
       fullPath: '/directorio'
       preLoaderRoute: typeof DirectorioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth-callback': {
-      id: '/auth-callback'
-      path: '/auth-callback'
-      fullPath: '/auth-callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -400,7 +380,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  AuthCallbackRoute: AuthCallbackRoute,
   DirectorioRoute: DirectorioRoute,
   MapaRoute: MapaRoute,
   RegistroRoute: RegistroRoute,
