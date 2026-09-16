@@ -199,7 +199,14 @@ function AuthPage() {
         </p>
       </div>
 
+      {accountConfirmed && (
+        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <p className="font-medium">{ACCOUNT_CONFIRMED_MESSAGE}</p>
+        </div>
+      )}
+
       {signupPending && (
+
         <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
           <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
           <p className="text-muted-foreground mt-1">
