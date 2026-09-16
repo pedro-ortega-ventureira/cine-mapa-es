@@ -23,3 +23,13 @@ describe("flujo email/contraseña sin navegación automática", () => {
     expect(action.message).toMatch(/inicia sesión/i);
   });
 });
+
+describe("afterEmailConfirmation", () => {
+  it("cierra la sesión del enlace y no navega a ninguna parte", async () => {
+    const { afterEmailConfirmation, ACCOUNT_CONFIRMED_MESSAGE } = await import("./auth-flow");
+    const action = afterEmailConfirmation();
+    expect(action.signOut).toBe(true);
+    expect(action.navigateTo).toBeNull();
+    expect(action.message).toBe(ACCOUNT_CONFIRMED_MESSAGE);
+  });
+});
