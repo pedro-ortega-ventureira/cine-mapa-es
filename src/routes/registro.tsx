@@ -500,6 +500,18 @@ function RegistroPage() {
           </p>
         </div>
 
+        {signupPending && (
+          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+            <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
+            <p className="text-muted-foreground mt-1">
+              Te hemos enviado un enlace de confirmación a {authEmail}. Ábrelo y después inicia
+              sesión aquí para completar tu ficha.
+            </p>
+          </div>
+        )}
+
+
+
         <form onSubmit={handleAuthSubmit} className="space-y-3 border rounded-lg p-6 bg-card">
           <div>
             <Label htmlFor="reg-email">Email</Label>
