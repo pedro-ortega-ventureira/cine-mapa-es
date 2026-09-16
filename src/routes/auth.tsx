@@ -7,6 +7,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Film } from "lucide-react";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
+import {
+  afterPasswordRecoveryUpdate,
+  afterSignUp,
+  SIGNUP_CONFIRM_MESSAGE,
+} from "@/lib/auth-flow";
+
 import { validateAuthSearch } from "@/lib/auth-search";
 
 export const Route = createFileRoute("/auth")({
@@ -33,6 +39,8 @@ function AuthPage() {
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
+  const [signupPending, setSignupPending] = useState(false);
+
 
   useEffect(() => {
     if (recovery) setRecoveryMode(true);
@@ -70,9 +78,14 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Contraseña actualizada");
+      const action = afterPasswordRecoveryUpdate();
       setRecoveryMode(false);
-      navigate({ to: "/admin" });
+      setNewPassword("");
+      setNewPassword2("");
+      // La sesión de recuperación no da acceso al panel.
+      if (action.signOut) await supabase.auth.signOut();
+      setMode("signin");
+      toast.success(action.message);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
     } finally {
@@ -89,14 +102,20 @@ function AuthPage() {
         if (error) throw error;
         navigate({ to: "/admin" });
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/admin" },
+          options: { emailRedirectTo: window.location.origin + "/auth" },
         });
         if (error) throw error;
-        toast.success("Cuenta creada. Revisa tu email si es necesario.");
-        navigate({ to: "/admin" });
+        const action = afterSignUp();
+        // Aunque el backend devuelva sesión, se cierra: primero hay que
+        // confirmar la cuenta desde el correo.
+        if (action.signOut && data.session) await supabase.auth.signOut();
+        setMode("signin");
+        setPassword("");
+        setSignupPending(true);
+        toast.success(action.message);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
@@ -104,6 +123,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   if (recoveryMode) {
     return (
@@ -161,6 +181,16 @@ function AuthPage() {
           Panel de gestión del directorio audiovisual rural
         </p>
       </div>
+
+      {signupPending && (
+        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
+          <p className="text-muted-foreground mt-1">
+            Hemos enviado un enlace de confirmación a {email}. Ábrelo y después inicia sesión.
+          </p>
+        </div>
+      )}
+
 
       <form onSubmit={handleSubmit} className="space-y-3 border rounded-lg p-6 bg-card">
         <div>

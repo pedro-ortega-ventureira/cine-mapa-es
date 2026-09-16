@@ -12,6 +12,12 @@ import {
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
+import {
+  afterPasswordRecoveryUpdate,
+  afterSignUp,
+  SIGNUP_CONFIRM_MESSAGE,
+} from "@/lib/auth-flow";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,6 +150,8 @@ function RegistroPage() {
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
+  const [signupPending, setSignupPending] = useState(false);
+
 
   // Al volver desde el enlace del email, Supabase emite PASSWORD_RECOVERY.
   useEffect(() => {
@@ -181,16 +189,21 @@ function RegistroPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Contraseña actualizada");
+      const action = afterPasswordRecoveryUpdate();
       setNewPassword("");
       setNewPassword2("");
       setRecoveryMode(false);
+      // No se entra a la plataforma con la sesión de recuperación.
+      if (action.signOut) await supabase.auth.signOut();
+      setAuthMode("signin");
+      toast.success(action.message);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
     } finally {
       setAuthLoading(false);
     }
   }
+
 
   const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
@@ -302,17 +315,17 @@ function RegistroPage() {
           options: { emailRedirectTo: window.location.origin + "/registro" },
         });
         if (error) throw error;
-        // Si el proyecto tiene la confirmación de email activada, signUp no
-        // devuelve sesión: el formulario de perfil no puede aparecer todavía y
-        // hay que decirlo, en vez de invitar a "completar tu perfil abajo".
-        if (data.session) {
-          toast.success("Cuenta creada. Ahora completa tu perfil abajo.");
-        } else {
-          toast.success(
-            "Cuenta creada. Te hemos enviado un email de confirmación: ábrelo y volverás aquí para completar tu perfil.",
-          );
-        }
+        const action = afterSignUp();
+        // Aunque el backend devuelva sesión, se cierra: el perfil no se
+        // muestra hasta que la cuenta esté confirmada por email.
+        if (action.signOut && data.session) await supabase.auth.signOut();
+        setSession(null);
+        setAuthMode("signin");
+        setAuthPassword("");
+        setSignupPending(true);
+        toast.success(action.message);
       }
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
     } finally {
@@ -494,6 +507,18 @@ function RegistroPage() {
             Entra con tu cuenta para crear tu ficha o corregir la que ya tienes.
           </p>
         </div>
+
+        {signupPending && (
+          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+            <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
+            <p className="text-muted-foreground mt-1">
+              Te hemos enviado un enlace de confirmación a {authEmail}. Ábrelo y después inicia
+              sesión aquí para completar tu ficha.
+            </p>
+          </div>
+        )}
+
+
 
         <form onSubmit={handleAuthSubmit} className="space-y-3 border rounded-lg p-6 bg-card">
           <div>
