@@ -181,16 +181,21 @@ function RegistroPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Contraseña actualizada");
+      const action = afterPasswordRecoveryUpdate();
       setNewPassword("");
       setNewPassword2("");
       setRecoveryMode(false);
+      // No se entra a la plataforma con la sesión de recuperación.
+      if (action.signOut) await supabase.auth.signOut();
+      setAuthMode("signin");
+      toast.success(action.message);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
     } finally {
       setAuthLoading(false);
     }
   }
+
 
   const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
