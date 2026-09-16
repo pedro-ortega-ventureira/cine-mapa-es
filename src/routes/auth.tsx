@@ -70,9 +70,14 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Contraseña actualizada");
+      const action = afterPasswordRecoveryUpdate();
       setRecoveryMode(false);
-      navigate({ to: "/admin" });
+      setNewPassword("");
+      setNewPassword2("");
+      // La sesión de recuperación no da acceso al panel.
+      if (action.signOut) await supabase.auth.signOut();
+      setMode("signin");
+      toast.success(action.message);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
     } finally {
@@ -89,14 +94,20 @@ function AuthPage() {
         if (error) throw error;
         navigate({ to: "/admin" });
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/admin" },
+          options: { emailRedirectTo: window.location.origin + "/auth" },
         });
         if (error) throw error;
-        toast.success("Cuenta creada. Revisa tu email si es necesario.");
-        navigate({ to: "/admin" });
+        const action = afterSignUp();
+        // Aunque el backend devuelva sesión, se cierra: primero hay que
+        // confirmar la cuenta desde el correo.
+        if (action.signOut && data.session) await supabase.auth.signOut();
+        setMode("signin");
+        setPassword("");
+        setSignupPending(true);
+        toast.success(action.message);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
@@ -104,6 +115,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   if (recoveryMode) {
     return (
