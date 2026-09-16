@@ -431,6 +431,18 @@ function RegistroPage() {
           >
             {authMode === "signin" ? "¿No tienes cuenta? Crear una" : "¿Ya tienes cuenta? Entrar"}
           </button>
+          <div className="relative py-1 text-center">
+            <span className="text-xs text-muted-foreground">o</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={authLoading}
+            onClick={handleGoogleSignIn}
+          >
+            Continuar con Google
+          </Button>
         </form>
       </div>
     );
