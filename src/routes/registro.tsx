@@ -20,6 +20,10 @@ import {
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+import {
+  PASSWORD_RECOVERY_REDIRECT_URL,
+  SIGNUP_CONFIRM_REDIRECT_URL,
+} from "@/lib/auth-redirects";
 
 
 import { Button } from "@/components/ui/button";
@@ -188,7 +192,7 @@ function RegistroPage() {
     setResetting(true);
     try {
       await supabase.auth.resetPasswordForEmail(authEmail.trim(), {
-        redirectTo: `${window.location.origin}/registro`,
+        redirectTo: PASSWORD_RECOVERY_REDIRECT_URL,
       });
     } finally {
       setResetting(false);
@@ -331,7 +335,7 @@ function RegistroPage() {
         const { data, error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
-          options: { emailRedirectTo: window.location.origin + "/registro" },
+          options: { emailRedirectTo: SIGNUP_CONFIRM_REDIRECT_URL },
         });
         if (error) throw error;
         const action = afterSignUp();
