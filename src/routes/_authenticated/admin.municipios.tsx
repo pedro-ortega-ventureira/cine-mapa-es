@@ -18,7 +18,9 @@ function MunicipiosAdmin() {
   const countQ = useQuery({
     queryKey: ["mun-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("municipalities").select("*", { count: "exact", head: true });
+      const { count } = await supabase
+        .from("municipalities")
+        .select("*", { count: "exact", head: true });
       return count ?? 0;
     },
   });
@@ -98,8 +100,8 @@ function MunicipiosAdmin() {
         <div>
           <h1 className="text-2xl font-semibold">Municipios</h1>
           <p className="text-sm text-muted-foreground">
-            {countQ.data ?? "—"} municipios en la base de datos ·{" "}
-            {cpCountQ.data ?? "—"} con códigos postales
+            {countQ.data ?? "—"} municipios en la base de datos · {cpCountQ.data ?? "—"} con códigos
+            postales
           </p>
         </div>
         <div className="flex gap-2">
@@ -132,7 +134,7 @@ function MunicipiosAdmin() {
             </tr>
           </thead>
           <tbody>
-            {(listQ.data ?? []).map((m: any) => (
+            {(listQ.data ?? []).map((m) => (
               <tr key={m.code} className="border-t">
                 <td className="p-2 font-medium">{m.name}</td>
                 <td className="p-2 text-muted-foreground">{m.province}</td>

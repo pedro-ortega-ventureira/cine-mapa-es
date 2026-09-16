@@ -155,11 +155,7 @@ function indexDbMunicipalities(municipalities: DbMunicipality[]): Index {
 }
 
 /** Resuelve el `code` de la tabla `municipalities` para un municipio del GeoJSON. */
-export function matchMunicipalityCode(
-  index: Index,
-  name: string,
-  province: string,
-): string | null {
+export function matchMunicipalityCode(index: Index, name: string, province: string): string | null {
   const nameKeys = municipalityNameKeys(name);
   const provKeys = provinceKeys(province);
   const hits = new Set<string>();
@@ -237,7 +233,9 @@ export function buildPostalCodeAssignments(
 }
 
 /** Agrupa el dataset externo CP↔INE en un índice `INE -> CPs`. */
-export function indexPostalCodesByIne(rows: Array<Record<string, unknown>>): Map<string, Set<string>> {
+export function indexPostalCodesByIne(
+  rows: Array<Record<string, unknown>>,
+): Map<string, Set<string>> {
   const byIne = new Map<string, Set<string>>();
   for (const row of rows) {
     const ine = normalizeIneCode(row["municipio_id"] ?? row["cod_municipio"] ?? row["ine"]);

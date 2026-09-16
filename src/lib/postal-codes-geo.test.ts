@@ -45,8 +45,18 @@ describe("buildPostalCodeAssignments", () => {
       codigo_postal: "15111",
     },
     { codigo_ine: "15041", municipio: "A LARACHA", provincia: "A CORUÑA", codigo_postal: "15145" },
-    { codigo_ine: "03002", municipio: "AGOST", provincia: "ALACANT/ALICANTE", codigo_postal: "03698" },
-    { codigo_ine: "99999", municipio: "MUNICIPIO INEXISTENTE", provincia: "SORIA", codigo_postal: "42000" },
+    {
+      codigo_ine: "03002",
+      municipio: "AGOST",
+      provincia: "ALACANT/ALICANTE",
+      codigo_postal: "03698",
+    },
+    {
+      codigo_ine: "99999",
+      municipio: "MUNICIPIO INEXISTENTE",
+      provincia: "SORIA",
+      codigo_postal: "42000",
+    },
   ];
 
   it("añade los códigos postales del listado externo, no solo el de cabecera", () => {
