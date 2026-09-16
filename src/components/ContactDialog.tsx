@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -7,7 +13,13 @@ import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export function ContactDialog({ professionalId, professionalName }: { professionalId: string; professionalName: string }) {
+export function ContactDialog({
+  professionalId,
+  professionalName,
+}: {
+  professionalId: string;
+  professionalName: string;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ sender_name: "", sender_email: "", subject: "", message: "" });
@@ -24,7 +36,9 @@ export function ContactDialog({ professionalId, professionalName }: { profession
       toast.error("No se pudo enviar el mensaje", { description: error.message });
       return;
     }
-    toast.success("Mensaje enviado", { description: "El profesional lo recibirá en breve." });
+    toast.success("Mensaje enviado", {
+      description: "La administración lo revisará y gestionará.",
+    });
     setOpen(false);
     setForm({ sender_name: "", sender_email: "", subject: "", message: "" });
   }

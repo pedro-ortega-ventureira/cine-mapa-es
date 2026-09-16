@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { locationFromMunicipality } from "@/lib/professional-location";
+import type { Database } from "@/integrations/supabase/types";
 
 // Self-service registration for professionals. Unlike professionals.functions.ts,
 // there is NO assertAdmin() here — any authenticated user may create/update
@@ -17,6 +19,10 @@ async function getAdminClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
+
+type AdminClient = Awaited<ReturnType<typeof getAdminClient>>;
+type ProfessionalInsert = Database["public"]["Tables"]["professionals"]["Insert"];
+type ProfessionalUpdate = Database["public"]["Tables"]["professionals"]["Update"];
 
 const slugify = (s: string) =>
   s
@@ -69,7 +75,7 @@ const publicProfessionalInputSchema = z.object({
 // Nota: `postal_codes` está vacío en `municipalities`, así que el buscador del
 // formulario cruza por nombre y provincia. Si algún día se puebla (ver
 // /api/public/seed-postal-codes), la búsqueda por CP funcionará sin cambios.
-async function resolveMunicipality(db: any, code: string | null | undefined) {
+async function resolveMunicipality(db: AdminClient, code: string | null | undefined) {
   if (!code) {
     throw new Error(
       "Elige tu municipio de residencia en el buscador: el directorio solo admite municipios de menos de 20.000 habitantes.",
@@ -77,7 +83,7 @@ async function resolveMunicipality(db: any, code: string | null | undefined) {
   }
   const { data, error } = await db
     .from("municipalities")
-    .select("code,name,province,population")
+    .select("code,name,province,population,lat,lng")
     .eq("code", code)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -91,7 +97,14 @@ async function resolveMunicipality(db: any, code: string | null | undefined) {
       `El directorio solo admite profesionales residentes en municipios de menos de ${MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes. ${data.name} (${data.province}) tiene ${(data.population ?? 0).toLocaleString("es-ES")}.`,
     );
   }
-  return data as { code: string; name: string; province: string; population: number };
+  return data as {
+    code: string;
+    name: string;
+    province: string;
+    population: number;
+    lat: number | null;
+    lng: number | null;
+  };
 }
 
 export const getMyProfessional = createServerFn({ method: "POST" })
@@ -129,11 +142,12 @@ export const registerProfessional = createServerFn({ method: "POST" })
     // un error de clave duplicada al usuario.
     const baseSlug = slugify(data.full_name) || "profesional";
 
-    const basePayload: any = {
+    const basePayload = {
       ...data,
       email: data.email || null,
       user_id: context.userId,
       municipality_code: municipality.code,
+      ...locationFromMunicipality(municipality),
       // Publicación inmediata y abierta: sin cola de moderación. El municipio
       // ya está validado contra la regla de <20.000 habitantes.
       verified: true,
@@ -146,7 +160,7 @@ export const registerProfessional = createServerFn({ method: "POST" })
       const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
       const { data: row, error } = await db
         .from("professionals")
-        .insert({ ...basePayload, slug })
+        .insert({ ...basePayload, slug } as ProfessionalInsert)
         .select()
         .single();
       if (!error) return row;
@@ -180,17 +194,18 @@ export const updateMyProfessional = createServerFn({ method: "POST" })
 
     const municipality = await resolveMunicipality(db, data.municipality_code);
 
-    const payload: any = {
+    const payload = {
       ...data,
       email: data.email || null,
       municipality_code: municipality.code,
+      ...locationFromMunicipality(municipality),
       verified: true,
       active: true,
       exclusion_reason: null,
     };
     const { data: row, error } = await db
       .from("professionals")
-      .update(payload)
+      .update(payload as ProfessionalUpdate)
       .eq("id", existing.id)
       .select()
       .single();

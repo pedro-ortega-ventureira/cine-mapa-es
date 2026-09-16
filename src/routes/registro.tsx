@@ -16,7 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Film, CheckCircle2 } from "lucide-react";
+import { Film, CheckCircle2, Info } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/registro")({
   ssr: false,
@@ -24,6 +26,10 @@ export const Route = createFileRoute("/registro")({
 });
 
 const selectClass = "w-full rounded-md border border-input px-2 py-2 text-sm bg-background";
+
+function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1 text-xs text-muted-foreground">{children}</p>;
+}
 
 // El directorio solo admite profesionales residentes en municipios de menos de
 // 20.000 habitantes, así que el buscador solo ofrece esos. El municipio se
@@ -48,6 +54,8 @@ type MunicipalityLite = {
   population: number | null;
   postal_codes: string[] | null;
 };
+
+type ProfessionalRow = Database["public"]["Tables"]["professionals"]["Row"];
 
 type FormState = {
   full_name: string;
@@ -105,7 +113,7 @@ const emptyForm: FormState = {
   tags: "",
 };
 
-function rowToForm(row: any): FormState {
+function rowToForm(row: ProfessionalRow): FormState {
   return {
     full_name: row.full_name ?? "",
     alias: row.alias ?? "",
@@ -136,13 +144,13 @@ function rowToForm(row: any): FormState {
 }
 
 function RegistroPage() {
-  const [session, setSession] = useState<any>(undefined);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
-  const [existing, setExisting] = useState<any | null | undefined>(undefined);
+  const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [munQuery, setMunQuery] = useState("");
@@ -226,9 +234,7 @@ function RegistroPage() {
     staleTime: 30 * 60_000,
   });
 
-  const selectedMunicipality = form.municipality_code
-    ? (selectedMunicipalityQ.data ?? null)
-    : null;
+  const selectedMunicipality = form.municipality_code ? (selectedMunicipalityQ.data ?? null) : null;
 
   // Autorrelleno: si el código postal identifica un único municipio elegible,
   // se selecciona solo. Si el usuario ya había elegido uno a mano, no se toca
@@ -269,7 +275,7 @@ function RegistroPage() {
         toast.error(e instanceof Error ? e.message : "No se pudo cargar tu perfil");
       }
     })();
-  }, [session]);
+  }, [session, getMineFn]);
 
   async function handleAuthSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -373,18 +379,29 @@ function RegistroPage() {
         bio: form.bio || null,
         years_of_experience: yearsExp,
         languages: form.languages
-          ? form.languages.split(",").map((s) => s.trim()).filter(Boolean)
+          ? form.languages
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
           : [],
         availability: form.availability || null,
         works_remotely: form.works_remotely,
         willing_to_travel: form.willing_to_travel,
         reel_url: form.reel_url || null,
         equipment_owned: form.equipment_owned
-          ? form.equipment_owned.split(",").map((s) => s.trim()).filter(Boolean)
+          ? form.equipment_owned
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
           : [],
         union_membership: form.union_membership || null,
         nif_cif: form.nif_cif || null,
-        tags: form.tags ? form.tags.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        tags: form.tags
+          ? form.tags
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
       };
       const row = existing
         ? await updateFn({ data: payload })
@@ -413,9 +430,9 @@ function RegistroPage() {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
             <Film className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-semibold">Únete al directorio</h1>
+          <h1 className="text-2xl font-semibold">Tu ficha en el directorio</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Regístrate gratis y publica tu perfil profesional en el directorio audiovisual rural.
+            Entra con tu cuenta para crear tu ficha o corregir la que ya tienes.
           </p>
         </div>
 
@@ -472,7 +489,7 @@ function RegistroPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Film className="h-6 w-6 text-primary" />
-          {existing ? "Tu perfil profesional" : "Publica tu perfil"}
+          {existing ? "Tu ficha profesional" : "Publica tu ficha"}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {existing
@@ -481,9 +498,47 @@ function RegistroPage() {
         </p>
         {existing && (
           <p className="text-sm text-emerald-600 flex items-center gap-1 mt-2">
-            <CheckCircle2 className="h-4 w-4" /> Tu perfil está publicado y visible en el directorio.
+            <CheckCircle2 className="h-4 w-4" /> Tu ficha está publicada y visible en el directorio.
+            {existing.slug && (
+              <a
+                href={`/profesionales/${existing.slug}`}
+                className="ml-1 text-primary hover:underline"
+              >
+                Ver mi ficha
+              </a>
+            )}
           </p>
         )}
+      </div>
+
+      <div className="mb-8 rounded-lg border bg-secondary/30 p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 font-medium">
+          <Info className="h-4 w-4 text-primary" /> Cómo rellenar tu ficha
+        </h2>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm marker:text-muted-foreground">
+          <li>
+            <strong>Nombre y municipio son obligatorios.</strong> Puedes completar el resto más
+            adelante.
+          </li>
+          <li>
+            <strong>Comprueba el municipio.</strong> Es el dato que te sitúa en el directorio y en
+            el mapa al guardar la ficha.
+          </li>
+          <li>
+            <strong>Elige tus roles y tipos de producción.</strong> Son los filtros con los que te
+            encontrarán.
+          </li>
+        </ol>
+        <div className="mt-4 border-t pt-3 text-sm">
+          <p>
+            <strong>Qué se publica.</strong> Nombre, alias, municipio, código postal, roles,
+            biografía, web, showreel y etiquetas.
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            El <strong>email</strong>, el <strong>teléfono</strong> y el <strong>NIF/CIF</strong> no
+            son públicos. Los mensajes de contacto los gestiona la administración del directorio.
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -502,14 +557,21 @@ function RegistroPage() {
             </div>
             <div>
               <Label>Alias / nombre artístico</Label>
-              <Input value={form.alias} onChange={(e) => setForm({ ...form, alias: e.target.value })} />
+              <Input
+                value={form.alias}
+                onChange={(e) => setForm({ ...form, alias: e.target.value })}
+              />
             </div>
             <div>
               <Label>Foto (URL)</Label>
               <Input
                 value={form.photo_url}
                 onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+                placeholder="https://…"
               />
+              <Hint>
+                Pega la dirección de una foto ya publicada en internet. No se suben archivos.
+              </Hint>
             </div>
             <div>
               <Label>Año de nacimiento</Label>
@@ -556,11 +618,10 @@ function RegistroPage() {
               inputMode="numeric"
               maxLength={5}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Introduce tu código postal. Si corresponde a un único municipio rural, lo
-              seleccionaremos automáticamente; si lo comparten varios, podrás elegir el tuyo en
-              la lista.
-            </p>
+            <Hint>
+              Si identifica un único municipio rural, lo seleccionaremos automáticamente. Comprueba
+              después el municipio: es el que determina tu ubicación en el mapa.
+            </Hint>
           </div>
           <div>
             <Label>Municipio de residencia *</Label>
@@ -617,7 +678,9 @@ function RegistroPage() {
                 {munQuery.trim().length >= 2 && (
                   <div className="mt-1 max-h-56 overflow-auto rounded-md border divide-y">
                     {buscandoMunicipios && (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">Buscando municipios…</p>
+                      <p className="px-3 py-2 text-sm text-muted-foreground">
+                        Buscando municipios…
+                      </p>
                     )}
                     {!buscandoMunicipios && munMatches.length === 0 && (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
@@ -662,14 +725,22 @@ function RegistroPage() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
+              <Hint>No se publica.</Hint>
             </div>
             <div>
               <Label>Teléfono</Label>
-              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+              <Hint>No se publica. Opcional.</Hint>
             </div>
             <div>
               <Label>Web</Label>
-              <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
+              <Input
+                value={form.website}
+                onChange={(e) => setForm({ ...form, website: e.target.value })}
+              />
             </div>
             <div>
               <Label>Reel / vídeo</Label>
@@ -805,7 +876,11 @@ function RegistroPage() {
           </h2>
           <div>
             <Label>Biografía</Label>
-            <Textarea rows={5} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+            <Textarea
+              rows={5}
+              value={form.bio}
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            />
           </div>
           <div>
             <Label>Etiquetas (separadas por comas)</Label>
@@ -813,7 +888,10 @@ function RegistroPage() {
           </div>
           <div>
             <Label>NIF/CIF (opcional, solo visible para administración)</Label>
-            <Input value={form.nif_cif} onChange={(e) => setForm({ ...form, nif_cif: e.target.value })} />
+            <Input
+              value={form.nif_cif}
+              onChange={(e) => setForm({ ...form, nif_cif: e.target.value })}
+            />
           </div>
         </section>
 
