@@ -477,12 +477,17 @@ function RegistroPage() {
         </h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm marker:text-muted-foreground">
           <li>
-            <strong>Nombre y municipio son obligatorios.</strong> Puedes completar el resto más
-            adelante.
+            <strong>Rellena primero el código postal.</strong> Es obligatorio y tiene 5 dígitos: es
+            lo que identifica tu localidad.
           </li>
           <li>
-            <strong>Comprueba el municipio.</strong> Es el dato que te sitúa en el directorio y en
-            el mapa al guardar la ficha.
+            <strong>Si el código postal identifica una sola localidad</strong>, se selecciona
+            automáticamente. <strong>Si corresponde a varias</strong>, tienes que elegir la tuya en
+            la lista antes de guardar.
+          </li>
+          <li>
+            <strong>Nombre y municipio son obligatorios.</strong> Puedes completar el resto más
+            adelante.
           </li>
           <li>
             <strong>Elige tus roles y tipos de producción.</strong> Son los filtros con los que te
