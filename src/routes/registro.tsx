@@ -13,10 +13,14 @@ import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
 import {
+  ACCOUNT_CONFIRMED_MESSAGE,
+  afterEmailConfirmation,
   afterPasswordRecoveryUpdate,
   afterSignUp,
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
+import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
