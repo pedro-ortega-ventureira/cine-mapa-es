@@ -23,3 +23,11 @@ export function afterSignUp(): PostAuthAction {
 export function afterPasswordRecoveryUpdate(): PostAuthAction {
   return { signOut: true, navigateTo: null, message: PASSWORD_UPDATED_MESSAGE };
 }
+
+export const ACCOUNT_CONFIRMED_MESSAGE =
+  "Cuenta confirmada. Inicia sesión con tu email y tu contraseña.";
+
+/** Al volver del enlace de confirmación tampoco se entra automáticamente. */
+export function afterEmailConfirmation(): PostAuthAction {
+  return { signOut: true, navigateTo: null, message: ACCOUNT_CONFIRMED_MESSAGE };
+}

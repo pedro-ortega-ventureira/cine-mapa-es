@@ -13,10 +13,14 @@ import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
 import {
+  ACCOUNT_CONFIRMED_MESSAGE,
+  afterEmailConfirmation,
   afterPasswordRecoveryUpdate,
   afterSignUp,
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
+import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,15 +155,30 @@ function RegistroPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
   const [signupPending, setSignupPending] = useState(false);
+  const [accountConfirmed, setAccountConfirmed] = useState(false);
+  // El tipo de enlace se lee de forma síncrona al cargar el módulo, antes de
+  // que el cliente de Supabase borre el hash (evita la carrera con el evento).
+  const [recoveryFromLink] = useState(() => INITIAL_AUTH_LINK_TYPE === "recovery");
 
-
-  // Al volver desde el enlace del email, Supabase emite PASSWORD_RECOVERY.
   useEffect(() => {
+    if (recoveryFromLink) setRecoveryMode(true);
+    if (INITIAL_AUTH_LINK_TYPE === "signup") {
+      // Enlace de confirmación: la cuenta queda activa pero no se entra.
+      (async () => {
+        const action = afterEmailConfirmation();
+        if (action.signOut) await supabase.auth.signOut();
+        setSession(null);
+        setAuthMode("signin");
+        setAccountConfirmed(true);
+        toast.success(action.message);
+      })();
+    }
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [recoveryFromLink]);
+
 
   async function handleForgotPassword() {
     if (!isValidEmail(authEmail)) {
@@ -508,7 +527,14 @@ function RegistroPage() {
           </p>
         </div>
 
+        {accountConfirmed && (
+          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+            <p className="font-medium">{ACCOUNT_CONFIRMED_MESSAGE}</p>
+          </div>
+        )}
+
         {signupPending && (
+
           <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
             <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
             <p className="text-muted-foreground mt-1">

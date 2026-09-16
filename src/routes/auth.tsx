@@ -8,10 +8,13 @@ import { toast } from "sonner";
 import { Film } from "lucide-react";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
 import {
+  ACCOUNT_CONFIRMED_MESSAGE,
+  afterEmailConfirmation,
   afterPasswordRecoveryUpdate,
   afterSignUp,
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
+import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
 
 import { validateAuthSearch } from "@/lib/auth-search";
 
@@ -19,9 +22,10 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: validateAuthSearch,
   beforeLoad: async ({ search }) => {
-    // Al volver desde el enlace del email hay sesión de recuperación: no se
-    // debe saltar al panel, hay que dejar cambiar la contraseña.
+    // Al volver desde el enlace del email hay sesión de recuperación o de
+    // confirmación: no se debe saltar al panel.
     if (search.recovery) return;
+    if (INITIAL_AUTH_LINK_TYPE === "recovery" || INITIAL_AUTH_LINK_TYPE === "signup") return;
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/admin" });
   },
@@ -36,19 +40,32 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(
+    () => recovery === true || INITIAL_AUTH_LINK_TYPE === "recovery",
+  );
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
   const [signupPending, setSignupPending] = useState(false);
+  const [accountConfirmed, setAccountConfirmed] = useState(false);
 
 
   useEffect(() => {
     if (recovery) setRecoveryMode(true);
+    if (INITIAL_AUTH_LINK_TYPE === "signup") {
+      (async () => {
+        const action = afterEmailConfirmation();
+        if (action.signOut) await supabase.auth.signOut();
+        setMode("signin");
+        setAccountConfirmed(true);
+        toast.success(action.message);
+      })();
+    }
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
     });
     return () => sub.subscription.unsubscribe();
   }, [recovery]);
+
 
   async function handleForgotPassword() {
     if (!isValidEmail(email)) {
@@ -182,7 +199,14 @@ function AuthPage() {
         </p>
       </div>
 
+      {accountConfirmed && (
+        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <p className="font-medium">{ACCOUNT_CONFIRMED_MESSAGE}</p>
+        </div>
+      )}
+
       {signupPending && (
+
         <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
           <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
           <p className="text-muted-foreground mt-1">
