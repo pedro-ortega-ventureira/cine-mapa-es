@@ -150,6 +150,8 @@ function RegistroPage() {
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
+  const [signupPending, setSignupPending] = useState(false);
+
 
   // Al volver desde el enlace del email, Supabase emite PASSWORD_RECOVERY.
   useEffect(() => {
