@@ -18,7 +18,9 @@ describe("Supabase public config", () => {
       projectId: "public-project",
     };
 
-    expect(getSupabasePublicConfig()).toEqual(globalThis.__SUPABASE_PUBLIC_CONFIG__);
+    expect(
+      getSupabasePublicConfig({}, globalThis.__SUPABASE_PUBLIC_CONFIG__, {}),
+    ).toEqual(globalThis.__SUPABASE_PUBLIC_CONFIG__);
   });
 
   it("escapes HTML-significant opening brackets in the inline script", () => {

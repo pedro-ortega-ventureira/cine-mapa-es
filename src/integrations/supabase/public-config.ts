@@ -4,6 +4,8 @@ export type SupabasePublicConfig = {
   projectId: string;
 };
 
+type PartialSupabasePublicConfig = Partial<SupabasePublicConfig>;
+
 declare global {
   var __SUPABASE_PUBLIC_CONFIG__: SupabasePublicConfig | undefined;
 }
@@ -13,22 +15,28 @@ function processValue(name: string): string {
   return process.env[name] ?? "";
 }
 
-export function getSupabasePublicConfig(): SupabasePublicConfig {
-  const runtimeConfig = globalThis.__SUPABASE_PUBLIC_CONFIG__;
+export function getSupabasePublicConfig(
+  buildConfig: PartialSupabasePublicConfig = {
+    url: import.meta.env.VITE_SUPABASE_URL,
+    publishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    projectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
+  },
+  runtimeConfig: PartialSupabasePublicConfig | undefined = globalThis.__SUPABASE_PUBLIC_CONFIG__,
+  serverConfig: PartialSupabasePublicConfig = {
+    url: processValue("SUPABASE_URL"),
+    publishableKey: processValue("SUPABASE_PUBLISHABLE_KEY"),
+    projectId: processValue("SUPABASE_PROJECT_ID"),
+  },
+): SupabasePublicConfig {
 
   return {
-    url:
-      import.meta.env.VITE_SUPABASE_URL ||
-      runtimeConfig?.url ||
-      processValue("SUPABASE_URL"),
+    url: buildConfig.url || runtimeConfig?.url || serverConfig.url || "",
     publishableKey:
-      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      buildConfig.publishableKey ||
       runtimeConfig?.publishableKey ||
-      processValue("SUPABASE_PUBLISHABLE_KEY"),
-    projectId:
-      import.meta.env.VITE_SUPABASE_PROJECT_ID ||
-      runtimeConfig?.projectId ||
-      processValue("SUPABASE_PROJECT_ID"),
+      serverConfig.publishableKey ||
+      "",
+    projectId: buildConfig.projectId || runtimeConfig?.projectId || serverConfig.projectId || "",
   };
 }
 
