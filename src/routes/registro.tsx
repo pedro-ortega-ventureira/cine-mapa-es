@@ -267,6 +267,25 @@ function RegistroPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setAuthLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth-callback?next=%2Fregistro`,
+      });
+      if (result.error) {
+        toast.error(result.error.message ?? "No se ha podido iniciar sesión con Google");
+        return;
+      }
+      if (result.redirected) return;
+      window.location.replace("/registro");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error de autenticación");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   function toggleArrayField(field: "secondary_roles" | "production_types", value: string) {
     setForm((f) => {
       const arr = f[field];
