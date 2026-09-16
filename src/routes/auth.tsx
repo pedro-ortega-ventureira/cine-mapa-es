@@ -15,6 +15,10 @@ import {
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+import {
+  PASSWORD_RECOVERY_REDIRECT_URL,
+  SIGNUP_CONFIRM_REDIRECT_URL,
+} from "@/lib/auth-redirects";
 
 import { validateAuthSearch } from "@/lib/auth-search";
 
@@ -75,7 +79,7 @@ function AuthPage() {
     setResetting(true);
     try {
       await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth?recovery=1`,
+        redirectTo: PASSWORD_RECOVERY_REDIRECT_URL,
       });
     } finally {
       setResetting(false);
@@ -122,7 +126,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/auth" },
+          options: { emailRedirectTo: SIGNUP_CONFIRM_REDIRECT_URL },
         });
         if (error) throw error;
         const action = afterSignUp();

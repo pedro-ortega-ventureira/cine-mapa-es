@@ -1,7 +1,9 @@
 # Roadmap
 
-- [x] Reproducir el fallo de hidratación publicado y capturar consola/runtime.
-- [x] Aislar la causa en `brokeredPreviewStorage()` o la actualización de configuración.
-- [x] Aplicar únicamente la corrección mínima, manteniendo `.env` fuera.
-- [x] Ejecutar pruebas y build.
-- [x] Verificar visualmente `/`, `/directorio`, `/mapa` y `/registro`.
+- [x] Diagnóstico de causa raíz del enlace de recuperación con correo real de producción
+- [x] Unificar el destino de recuperación en una constante compartida de producción
+- [ ] Pruebas que rechacen localhost u otros orígenes
+- [ ] Suite y compilación
+- [ ] Publicar y demostrar un correo NUEVO extremo a extremo
+- [ ] Eliminar cuentas temporales
+- [ ] Pendiente anterior: datos de contacto visibles para cualquier usuario registrado
