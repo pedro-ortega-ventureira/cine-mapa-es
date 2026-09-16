@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense, useMemo, useState } from "react";
@@ -369,16 +369,11 @@ function Directorio() {
 
           {mapOpen && (
             <div className="mb-6">
-              <Suspense
-                fallback={
-                  <div
-                    className="w-full rounded-lg border bg-muted animate-pulse"
-                    style={{ height: "min(50vh, 460px)", minHeight: 320 }}
-                  />
-                }
-              >
-                <ProfessionalsLeafletMap professionals={mapProfessionals} />
-              </Suspense>
+              <ClientOnly fallback={<div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />}>
+                <Suspense fallback={<div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />}>
+                  <ProfessionalsLeafletMap professionals={mapProfessionals} />
+                </Suspense>
+              </ClientOnly>
               {mapProfessionals.length === 0 && !profsQ.isLoading && (
                 <p className="mt-2 text-xs text-muted-foreground">
                   Ningún profesional con localización coincide con los filtros.
