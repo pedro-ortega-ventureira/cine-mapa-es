@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
 import {
   getMyProfessional,
   registerProfessional,
@@ -268,25 +268,6 @@ function RegistroPage() {
     }
   }
 
-  async function handleGoogleSignIn() {
-    setAuthLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth-callback?next=%2Fregistro`,
-      });
-      if (result.error) {
-        toast.error(result.error.message ?? "No se ha podido iniciar sesión con Google");
-        return;
-      }
-      if (result.redirected) return;
-      window.location.replace("/registro");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error de autenticación");
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
   function toggleArrayField(field: "secondary_roles" | "production_types", value: string) {
     setForm((f) => {
       const arr = f[field];
@@ -451,18 +432,6 @@ function RegistroPage() {
           >
             {authMode === "signin" ? "¿No tienes cuenta? Crear una" : "¿Ya tienes cuenta? Entrar"}
           </button>
-          <div className="relative py-1 text-center">
-            <span className="text-xs text-muted-foreground">o</span>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={authLoading}
-            onClick={handleGoogleSignIn}
-          >
-            Continuar con Google
-          </Button>
         </form>
       </div>
     );
