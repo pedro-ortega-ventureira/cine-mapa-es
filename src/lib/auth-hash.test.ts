@@ -24,3 +24,28 @@ describe("readAuthHashType", () => {
     expect(readAuthHashType("#error=access_denied&error_code=otp_expired")).toBe("other");
   });
 });
+
+describe("authLinkDestination", () => {
+  it("lleva la recuperación que cae en la portada al formulario de contraseña", async () => {
+    const { authLinkDestination } = await import("./auth-hash");
+    expect(authLinkDestination("recovery", "/")).toBe("/auth-recovery");
+  });
+
+  it("lleva la confirmación que cae en la portada al registro", async () => {
+    const { authLinkDestination } = await import("./auth-hash");
+    expect(authLinkDestination("signup", "/")).toBe("/registro");
+  });
+
+  it("no mueve al usuario si ya está en una página que lo gestiona", async () => {
+    const { authLinkDestination } = await import("./auth-hash");
+    expect(authLinkDestination("recovery", "/registro")).toBeNull();
+    expect(authLinkDestination("recovery", "/auth")).toBeNull();
+    expect(authLinkDestination("signup", "/registro/")).toBeNull();
+  });
+
+  it("no hace nada sin enlace de correo", async () => {
+    const { authLinkDestination } = await import("./auth-hash");
+    expect(authLinkDestination(null, "/")).toBeNull();
+    expect(authLinkDestination("other", "/")).toBeNull();
+  });
+});

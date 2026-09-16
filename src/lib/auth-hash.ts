@@ -22,3 +22,18 @@ export function readAuthHashType(hash: string | undefined | null): AuthLinkType 
 
 export const INITIAL_AUTH_LINK_TYPE: AuthLinkType =
   typeof window === "undefined" ? null : readAuthHashType(window.location.hash);
+
+/**
+ * Si el enlace del correo aterriza en una página que no sabe gestionarlo
+ * (por ejemplo la portada), hay que llevar al usuario a la página correcta.
+ * Devuelve null cuando la página actual ya sabe gestionarlo.
+ */
+export function authLinkDestination(
+  type: AuthLinkType,
+  pathname: string,
+): "/auth-recovery" | "/registro" | null {
+  if (type !== "recovery" && type !== "signup") return null;
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/registro" || path === "/auth") return null;
+  return type === "recovery" ? "/auth-recovery" : "/registro";
+}
