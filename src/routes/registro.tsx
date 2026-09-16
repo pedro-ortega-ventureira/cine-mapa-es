@@ -9,7 +9,7 @@ import {
   updateMyProfessional,
 } from "@/lib/public-registration.functions";
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
-import { postalCodeForLookup, postalCodeRegistrationHint } from "@/lib/postal-code";
+import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,16 +35,6 @@ function Hint({ children }: { children: React.ReactNode }) {
 // cruza por nombre normalizado (sin acentos) o por código postal contra la
 // tabla `municipalities`, sin datos externos.
 const MAX_MUNICIPALITY_POPULATION = 20000;
-
-// Retarda el valor para no lanzar una consulta por cada tecla pulsada.
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
 
 type MunicipalityLite = {
   code: string;
@@ -152,49 +142,7 @@ function RegistroPage() {
   const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
-  const [munQuery, setMunQuery] = useState("");
   const [autoFilledFromCp, setAutoFilledFromCp] = useState(false);
-
-  // La búsqueda se resuelve en la base de datos, no descargando un listado
-  // truncado al navegador. Se consultan nombre y provincia por separado para
-  // evitar construir manualmente una expresión de filtro con texto del usuario.
-  const munQueryDebounced = useDebounced(munQuery.trim(), 250);
-
-  const munMatchesQ = useQuery({
-    queryKey: ["municipalities-search", munQueryDebounced],
-    enabled: munQueryDebounced.length >= 2,
-    queryFn: async () => {
-      const select = "code,name,province,population,postal_codes";
-      const baseQuery = () =>
-        supabase
-          .from("municipalities")
-          .select(select)
-          .lt("population", MAX_MUNICIPALITY_POPULATION)
-          .limit(30);
-      const [byName, byProvince] = await Promise.all([
-        baseQuery().ilike("name", `%${munQueryDebounced}%`),
-        baseQuery().ilike("province", `%${munQueryDebounced}%`),
-      ]);
-      if (byName.error) throw new Error(byName.error.message);
-      if (byProvince.error) throw new Error(byProvince.error.message);
-
-      const unique = new Map<string, MunicipalityLite>();
-      for (const municipality of [...(byName.data ?? []), ...(byProvince.data ?? [])]) {
-        unique.set(municipality.code, municipality as MunicipalityLite);
-      }
-      return [...unique.values()].slice(0, 30);
-    },
-    staleTime: 5 * 60_000,
-  });
-
-  const munMatches = useMemo(() => munMatchesQ.data ?? [], [munMatchesQ.data]);
-
-  // "Buscando…" también durante los 250 ms de retardo: si no, entre la última
-  // tecla y el disparo de la consulta se vería un "ningún municipio coincide"
-  // que es mentira.
-  const buscandoMunicipios =
-    munQuery.trim().length >= 2 &&
-    (munMatchesQ.isFetching || munQuery.trim() !== munQueryDebounced);
 
   // La API de Supabase pagina las respuestas grandes, por lo que el listado
   // general no es fiable para resolver un CP. Se consulta el CP exacto en la
@@ -204,12 +152,11 @@ function RegistroPage() {
     queryKey: ["municipalities-by-postal-code", postalCode],
     enabled: postalCode !== null,
     queryFn: async () => {
-      if (!postalCode) return [];
       const { data, error } = await supabase
         .from("municipalities")
         .select("code,name,province,population,postal_codes")
         .lt("population", MAX_MUNICIPALITY_POPULATION)
-        .contains("postal_codes", [postalCode])
+        .contains("postal_codes", [postalCode!])
         .order("name");
       if (error) throw new Error(error.message);
       return (data ?? []) as MunicipalityLite[];
@@ -237,25 +184,30 @@ function RegistroPage() {
     staleTime: 30 * 60_000,
   });
 
-  const selectedMunicipality = form.municipality_code ? (selectedMunicipalityQ.data ?? null) : null;
+  const selectedMunicipality = form.municipality_code
+    ? (cpMatches.find((municipality) => municipality.code === form.municipality_code) ??
+      selectedMunicipalityQ.data ??
+      null)
+    : null;
 
-  // Autorrelleno: si el código postal identifica un único municipio elegible,
-  // se selecciona solo. Si el usuario ya había elegido uno a mano, no se toca
-  // (evita pisar una elección manual al seguir escribiendo el CP). Si el CP
-  // deja de identificar ese municipio (typo corregido), se limpia la
-  // selección automática para no dejar un municipio equivocado seleccionado.
+  // El código postal manda: selecciona el único municipio asociado y, si hay
+  // varios, conserva únicamente una elección que pertenezca a ese código.
   useEffect(() => {
-    if (form.municipality_code && !autoFilledFromCp) return;
-    if (cpMatches.length === 1) {
-      if (cpMatches[0].code !== form.municipality_code) {
-        setForm((f) => ({ ...f, municipality_code: cpMatches[0].code }));
-      }
+    if (!postalCode || cpMatchesQ.isFetching) return;
+    const resolution = municipalityResolution(cpMatches.map((municipality) => municipality.code));
+    if (resolution.kind === "selected") {
+      setForm((f) => ({ ...f, municipality_code: resolution.municipalityCode }));
       setAutoFilledFromCp(true);
-    } else if (autoFilledFromCp) {
-      setForm((f) => ({ ...f, municipality_code: "" }));
-      setAutoFilledFromCp(false);
+      return;
     }
-  }, [cpMatches, form.municipality_code, autoFilledFromCp]);
+    const selectedMatchesPostalCode = cpMatches.some(
+      (municipality) => municipality.code === form.municipality_code,
+    );
+    if (!selectedMatchesPostalCode) {
+      setForm((f) => ({ ...f, municipality_code: "" }));
+    }
+    setAutoFilledFromCp(false);
+  }, [postalCode, cpMatches, cpMatchesQ.isFetching, form.municipality_code]);
 
   const getMineFn = useServerFn(getMyProfessional);
   const registerFn = useServerFn(registerProfessional);
@@ -331,10 +283,29 @@ function RegistroPage() {
       toast.error("El nombre es obligatorio");
       return;
     }
+    if (!postalCode) {
+      toast.error("El código postal es obligatorio y debe tener 5 dígitos");
+      return;
+    }
+    if (cpMatchesQ.isFetching) {
+      toast.error("Espera a que comprobemos el código postal");
+      return;
+    }
+    if (cpMatchesQ.isError) {
+      toast.error("No se ha podido comprobar el código postal. Inténtalo de nuevo");
+      return;
+    }
+    if (cpMatches.length === 0) {
+      toast.error("El código postal no corresponde a ningún municipio admitido");
+      return;
+    }
     // El municipio es obligatorio: la base de datos rechaza cualquier alta sin
     // municipio elegible (trigger trg_municipio_menor_20k).
-    if (!form.municipality_code) {
-      toast.error("Elige tu municipio de residencia en el buscador");
+    if (
+      !form.municipality_code ||
+      !cpMatches.some((municipality) => municipality.code === form.municipality_code)
+    ) {
+      toast.error("Elige el municipio que corresponde a tu código postal");
       return;
     }
     // Los campos numéricos se envían con parseInt: un valor no numérico daba
@@ -349,10 +320,6 @@ function RegistroPage() {
       : null;
     if (yearsExp !== null && !Number.isFinite(yearsExp)) {
       toast.error("Los años de experiencia deben ser un número");
-      return;
-    }
-    if (form.raw_postal_code.trim() && !/^\d{5}$/.test(form.raw_postal_code.trim())) {
-      toast.error("El código postal debe tener 5 dígitos");
       return;
     }
     setSaving(true);
@@ -603,22 +570,50 @@ function RegistroPage() {
             Ubicación y contacto
           </h2>
           <div>
-            <Label>Código postal</Label>
+            <Label>Código postal *</Label>
             <Input
               value={form.raw_postal_code}
-              onChange={(e) => setForm({ ...form, raw_postal_code: e.target.value.trim() })}
+              onChange={(e) => {
+                setForm({
+                  ...form,
+                  raw_postal_code: e.target.value.trim(),
+                  municipality_code: "",
+                });
+                setAutoFilledFromCp(false);
+              }}
               placeholder="p.ej. 15113"
               inputMode="numeric"
               maxLength={5}
+              pattern="[0-9]{5}"
+              required
             />
             <Hint>
-              {postalCodeRegistrationHint} Si identifica un único municipio rural, lo
-              seleccionaremos automáticamente.
+              Obligatorio. El código postal determina la localidad. Si corresponde a un único
+              municipio, lo seleccionaremos automáticamente; si corresponde a varios, tendrás que
+              elegir el tuyo.
             </Hint>
           </div>
           <div>
             <Label>Municipio de residencia *</Label>
-            {selectedMunicipality ? (
+            {!postalCode ? (
+              <p className="mt-1 rounded-md border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+                Introduce primero un código postal válido de 5 dígitos.
+              </p>
+            ) : cpMatchesQ.isFetching ? (
+              <p className="mt-1 rounded-md border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+                Comprobando el código postal…
+              </p>
+            ) : cpMatchesQ.isError ? (
+              <p className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                No se ha podido comprobar el código postal. Inténtalo de nuevo.
+              </p>
+            ) : cpMatches.length === 0 ? (
+              <p className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                Este código postal no corresponde a ningún municipio de menos de{" "}
+                {MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes admitido en el
+                directorio.
+              </p>
+            ) : selectedMunicipality ? (
               <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                 <span>
                   <strong>{selectedMunicipality.name}</strong> ({selectedMunicipality.province}) ·{" "}
@@ -627,87 +622,42 @@ function RegistroPage() {
                     <span className="text-muted-foreground"> · detectado por tu código postal</span>
                   )}
                 </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setForm({ ...form, municipality_code: "" });
-                    setMunQuery("");
-                    setAutoFilledFromCp(false);
-                  }}
-                >
-                  Cambiar
-                </Button>
+                {cpMatches.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setForm({ ...form, municipality_code: "" });
+                      setAutoFilledFromCp(false);
+                    }}
+                  >
+                    Cambiar
+                  </Button>
+                )}
               </div>
             ) : (
-              <>
-                {cpMatches.length > 1 && (
-                  <div className="mb-1.5 max-h-56 overflow-auto rounded-md border divide-y">
-                    <p className="px-3 py-1.5 text-xs text-muted-foreground bg-secondary/40">
-                      Varios municipios comparten ese código postal. Elige el tuyo:
-                    </p>
-                    {cpMatches.map((m) => (
-                      <button
-                        key={m.code}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-secondary/60"
-                        onClick={() => setForm({ ...form, municipality_code: m.code })}
-                      >
-                        {m.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({m.province}) · {(m.population ?? 0).toLocaleString("es-ES")} hab.
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  value={munQuery}
-                  onChange={(e) => setMunQuery(e.target.value)}
-                  placeholder="Escribe tu municipio o provincia"
-                  autoComplete="off"
-                />
-                {munQuery.trim().length >= 2 && (
-                  <div className="mt-1 max-h-56 overflow-auto rounded-md border divide-y">
-                    {buscandoMunicipios && (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        Buscando municipios…
-                      </p>
-                    )}
-                    {!buscandoMunicipios && munMatches.length === 0 && (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        Ningún municipio de menos de{" "}
-                        {MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes coincide.
-                        Prueba a buscar por provincia. El directorio solo admite residentes en
-                        municipios por debajo de ese umbral, así que las ciudades grandes no
-                        aparecen.
-                      </p>
-                    )}
-                    {munMatches.map((m) => (
-                      <button
-                        key={m.code}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-secondary/60"
-                        onClick={() => {
-                          setForm({ ...form, municipality_code: m.code });
-                          setMunQuery("");
-                        }}
-                      >
-                        {m.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({m.province}) · {(m.population ?? 0).toLocaleString("es-ES")} hab.
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Obligatorio. Solo se listan municipios de menos de{" "}
-                  {MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes: es el criterio
-                  del directorio.
+              <div className="mt-1 max-h-56 overflow-auto rounded-md border divide-y">
+                <p className="px-3 py-1.5 text-xs text-muted-foreground bg-secondary/40">
+                  Varios municipios comparten este código postal. Elige el tuyo:
                 </p>
-              </>
+                {cpMatches.map((m) => (
+                  <button
+                    key={m.code}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-secondary/60"
+                    onClick={() => {
+                      setForm({ ...form, municipality_code: m.code });
+                      setAutoFilledFromCp(false);
+                    }}
+                  >
+                    {m.name}{" "}
+                    <span className="text-muted-foreground">
+                      ({m.province}) · {(m.population ?? 0).toLocaleString("es-ES")} hab.
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <div className="grid sm:grid-cols-2 gap-3">

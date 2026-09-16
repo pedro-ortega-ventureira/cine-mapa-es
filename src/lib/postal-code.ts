@@ -4,5 +4,16 @@ export function postalCodeForLookup(value: string): string | null {
   return /^\d{5}$/.test(postalCode) ? postalCode : null;
 }
 
-export const postalCodeRegistrationHint =
-  "Añade tu código postal. Si corresponde a más de un municipio, elige tu municipio en la lista.";
+export type MunicipalityResolution =
+  | { kind: "selected"; municipalityCode: string }
+  | { kind: "choice-required" | "no-match"; municipalityCode: null };
+
+export function municipalityResolution(municipalityCodes: string[]): MunicipalityResolution {
+  if (municipalityCodes.length === 1) {
+    return { kind: "selected", municipalityCode: municipalityCodes[0] };
+  }
+  if (municipalityCodes.length > 1) {
+    return { kind: "choice-required", municipalityCode: null };
+  }
+  return { kind: "no-match", municipalityCode: null };
+}
