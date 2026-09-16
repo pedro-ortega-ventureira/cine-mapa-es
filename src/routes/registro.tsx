@@ -156,31 +156,34 @@ function RegistroPage() {
   const [munQuery, setMunQuery] = useState("");
   const [autoFilledFromCp, setAutoFilledFromCp] = useState(false);
 
-  // La búsqueda se resuelve en la base de datos, no en el navegador.
-  //
-  // Antes esto se descargaba el listado de municipios elegibles y filtraba en
-  // cliente. Pero PostgREST corta TODA respuesta en 1.000 filas y `.limit()`
-  // no levanta ese tope: es del servidor. Ordenado por nombre, el formulario
-  // solo conocía de "Ababuj" a "Beleña" — 1.000 de los 7.718 elegibles. El 87%
-  // de los municipios del directorio era inseleccionable y no fallaba nada: la
-  // respuesta llegaba truncada, callada y plausible.
-  //
-  // `search_municipalities` busca contra un índice trigram, aplica la regla de
-  // los 20.000 habitantes en el servidor y encuentra los 544 municipios que el
-  // INE escribe con el artículo pospuesto ("Pesquera (La)") también como los
-  // escribe la gente ("La Pesquera").
+  // La búsqueda se resuelve en la base de datos, no descargando un listado
+  // truncado al navegador. Se consultan nombre y provincia por separado para
+  // evitar construir manualmente una expresión de filtro con texto del usuario.
   const munQueryDebounced = useDebounced(munQuery.trim(), 250);
 
   const munMatchesQ = useQuery({
     queryKey: ["municipalities-search", munQueryDebounced],
     enabled: munQueryDebounced.length >= 2,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("search_municipalities", {
-        _q: munQueryDebounced,
-        _limit: 30,
-      });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as MunicipalityLite[];
+      const select = "code,name,province,population,postal_codes";
+      const baseQuery = () =>
+        supabase
+          .from("municipalities")
+          .select(select)
+          .lt("population", MAX_MUNICIPALITY_POPULATION)
+          .limit(30);
+      const [byName, byProvince] = await Promise.all([
+        baseQuery().ilike("name", `%${munQueryDebounced}%`),
+        baseQuery().ilike("province", `%${munQueryDebounced}%`),
+      ]);
+      if (byName.error) throw new Error(byName.error.message);
+      if (byProvince.error) throw new Error(byProvince.error.message);
+
+      const unique = new Map<string, MunicipalityLite>();
+      for (const municipality of [...(byName.data ?? []), ...(byProvince.data ?? [])]) {
+        unique.set(municipality.code, municipality as MunicipalityLite);
+      }
+      return [...unique.values()].slice(0, 30);
     },
     staleTime: 5 * 60_000,
   });
@@ -202,11 +205,12 @@ function RegistroPage() {
     queryKey: ["municipalities-by-postal-code", postalCode],
     enabled: postalCode !== null,
     queryFn: async () => {
+      if (!postalCode) return [];
       const { data, error } = await supabase
         .from("municipalities")
         .select("code,name,province,population,postal_codes")
         .lt("population", MAX_MUNICIPALITY_POPULATION)
-        .contains("postal_codes", [postalCode!])
+        .contains("postal_codes", [postalCode])
         .order("name");
       if (error) throw new Error(error.message);
       return (data ?? []) as MunicipalityLite[];
