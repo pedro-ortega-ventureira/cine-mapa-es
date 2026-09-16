@@ -12,9 +12,13 @@ type AuthSearch = { recovery?: boolean };
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): AuthSearch => ({
-    recovery: search["recovery"] === "1" || search["recovery"] === true,
-  }),
+  validateSearch: (search: Record<string, unknown>): AuthSearch => {
+    // El router parsea `recovery=1` como number 1 (no string), y con otros
+    // parsers puede llegar boolean: hay que aceptar todas las formas.
+    const raw = search["recovery"];
+    const active = raw === 1 || raw === "1" || raw === true || raw === "true";
+    return active ? { recovery: true } : {};
+  },
   beforeLoad: async ({ search }) => {
     // Al volver desde el enlace del email hay sesión de recuperación: no se
     // debe saltar al panel, hay que dejar cambiar la contraseña.
