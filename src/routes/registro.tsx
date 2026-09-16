@@ -307,17 +307,17 @@ function RegistroPage() {
           options: { emailRedirectTo: window.location.origin + "/registro" },
         });
         if (error) throw error;
-        // Si el proyecto tiene la confirmación de email activada, signUp no
-        // devuelve sesión: el formulario de perfil no puede aparecer todavía y
-        // hay que decirlo, en vez de invitar a "completar tu perfil abajo".
-        if (data.session) {
-          toast.success("Cuenta creada. Ahora completa tu perfil abajo.");
-        } else {
-          toast.success(
-            "Cuenta creada. Te hemos enviado un email de confirmación: ábrelo y volverás aquí para completar tu perfil.",
-          );
-        }
+        const action = afterSignUp();
+        // Aunque el backend devuelva sesión, se cierra: el perfil no se
+        // muestra hasta que la cuenta esté confirmada por email.
+        if (action.signOut && data.session) await supabase.auth.signOut();
+        setSession(null);
+        setAuthMode("signin");
+        setAuthPassword("");
+        setSignupPending(true);
+        toast.success(action.message);
       }
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
     } finally {
