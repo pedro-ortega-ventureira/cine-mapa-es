@@ -1,57 +1,31 @@
-## Objetivo
+# Diagnóstico: «Esta página no cargó» tras el commit 30200661
 
-1. Que el filtro inteligente del directorio funcione realmente (hoy sigue devolviendo resultados que no corresponden con la búsqueda escrita).
-2. Añadir en `/directorio` un mapa tipo home, pero pintando **solo los profesionales filtrados**.
+## Qué he comprobado (sin tocar código)
 
-## 1) Filtro: diagnóstico y corrección
+- El commit borró el archivo `.env` que estaba versionado. Contenía la dirección y la clave pública de una base de datos **antigua** (referencia `yriem…`).
+- La base de datos activa del proyecto ahora es **otra** (referencia `dmors…`). La configuración que la plataforma inyecta en el entorno de trabajo apunta a esa base nueva.
+- En el entorno de trabajo actual el archivo de configuración vuelve a existir (lo regenera la plataforma) y las páginas cargan bien: inicio, directorio y registro responden 200, sin errores de arranque ni errores en consola.
+- El código de la aplicación lanza un error explícito cuando faltan la dirección y la clave de la base de datos. Ese error ocurre al pintar la página en el servidor, y la pantalla que se muestra en ese caso es exactamente «Esta página no cargó».
+- El resto de cambios del commit (cabecera, registro, ubicación en mapa) no contienen nada que rompa el renderizado: no he encontrado ningún fallo de compilación ni de ejecución.
+- `supabase/config.toml` sigue apuntando a la referencia antigua `yriem…` (archivo autogenerado, resto informativo).
 
-Los datos en BD son correctos (`primary_role` = lista canónica separada por `; `, p.ej. `"Dirección / Realización; Guion; Producción"`, y `ILIKE '%Guion%'` sobre esos strings devuelve 16 filas coherentes). Es decir, el filtro SQL es correcto en aislamiento. El fallo está en la capa de parseo/aplicación de `src/routes/directorio.tsx` + `src/lib/search.ts`:
+## Causa exacta
 
-### Bugs concretos que veo en el código
+La vista previa de ese commit se quedó **sin los datos de conexión a la base de datos**: la aplicación los tomaba del archivo `.env` versionado, y al borrarlo la compilación de esa vista previa se construyó sin ellos. Al no encontrarlos, la aplicación lanza el error "faltan variables de Supabase" mientras genera la página en el servidor, y el sistema responde con la pantalla genérica «Esta página no cargó» en todas las rutas.
 
-- **Match de sinónimos demasiado agresivo.** `parseQuery` consume TODOS los sinónimos que aparezcan como palabra en la query. Con textos largos como "director de fotografia" primero cae la frase larga (correcto), pero con inputs sueltos como "dirección" también entra en `Dirección / Realización` porque `direccion` está listado; y "productor" no marca nada como texto libre porque ya se consumió. Hay que confirmar que el usuario obtiene lo que espera y no una unión inesperada.
-- **`freeText` restante se aplica como AND sobre todos los tokens.** Cuando el sinónimo se consume mal, `freeText` queda con palabras cortas ("de", "la"…) que casi todos los perfiles contienen → aparentemente "no filtra nada". Necesito ignorar tokens de <=2 chars y stopwords ("de","la","el","y").
-- **Chip "Rol" no borra el texto correcto.** `removeToken` recibe el nombre canónico (`Guion`), no el sinónimo escrito por el usuario (`guionista`), así que el regex no encuentra la palabra en el input y el chip parece no borrarse — el usuario cree que el filtro está "pegado".
-- **`enabled` de React Query.** `enabled: municipalitiesQ.isSuccess || !search.q` deja la query desactivada durante el primer render con `?q=` hasta que carguen 7.700 municipios. La lista tarda en aparecer y da sensación de "no filtra". Cambio a que se lance con `q` incluso sin municipios (los filtros por provincia/CCAA se aplican cuando el índice esté listo, vía `queryKey` que ya incluye `parsed`).
-- **Filtro por rol en cadenas multi-rol.** Ya usa `ilike '%Rol%'`, correcto. Pero cuando hay varios roles inferidos, el `.or("primary_role.ilike.%X%,primary_role.ilike.%Y%")` es OR, no AND — mantengo OR (comportamiento esperado) y lo documento.
+No es un fallo del código nuevo del commit, ni de la base de datos (está activa y responde).
 
-### Cambios
+Matiz honesto: no tengo acceso a los registros de esa compilación concreta de la vista previa, así que esta causa está deducida del contenido del commit, del comportamiento del código ante configuración ausente y de que el entorno actual, con configuración presente, funciona sin errores.
 
-1. **`src/lib/search.ts`**
-   - `parseQuery`: filtrar `freeText` para descartar tokens de longitud <=2 y una lista corta de stopwords en español.
-   - Devolver también, por cada rol/provincia/ccaa/municipio detectado, el `matchedPhrase` original consumido, para que el chip borre exactamente ese texto en la caja del usuario.
+## Corrección segura para publicar
 
-2. **`src/routes/directorio.tsx`**
-   - Cambiar `enabled` a `true` (siempre) y hacer que las ramas que dependen del índice de municipios se apliquen sólo cuando `municipalitiesQ.data` está cargado.
-   - `chips` y `removeToken`: usar la nueva `matchedPhrase` en vez del nombre canónico.
-   - Añadir un pequeño panel de depuración accesible (solo cuando `?debug=1`) que muestre `parsed` — útil para verificar sin volver a ciclos.
-
-### Verificación
-
-En build mode, con Playwright: `/directorio?q=guion`, `/directorio?q=granada`, `/directorio?q=guionista+andalucia`, `/directorio?q=director%20de%20fotografia`. Comprobar recuento y que el chip elimina el token escrito.
-
-## 2) Mapa filtrado en `/directorio`
-
-Reutilizar exactamente el componente `ProfessionalsLeafletMap` que ya usa la home (Península + inset de Canarias, coropletas de municipios <20k, clusters, popups). Se pinta encima de la rejilla de resultados y se alimenta de los MISMOS `enriched` que se muestran abajo, así el mapa siempre refleja el filtro activo.
-
-### Cambios
-
-1. **`src/routes/directorio.tsx`**
-   - Añadir un `useMemo` que transforma `enriched` en `MapProfessional[]`:
-     - Descarta filas sin `geo_lat` / `geo_lng`. Como el `select` actual no trae geo, ampliarlo con `geo_lat, geo_lng, geo_accuracy, geo_municipality_name, geo_province, verified` (columnas ya expuestas al rol `anon`).
-   - Renderizar el mapa arriba del bloque de resultados en un contenedor con altura `min(50vh, 460px)`, colapsable con un botón "Ocultar mapa / Mostrar mapa" (estado local, por defecto abierto en desktop, cerrado en móvil vía `use-mobile`).
-   - Si `enriched` está vacío tras aplicar filtros, mostrar el mapa base sin puntos (mismo componente, array vacío) con un rótulo "Sin profesionales para estos filtros".
-
-2. **`ProfessionalsLeafletMap`**: sin cambios; ya acepta `professionals: MapProfessional[]` variable y limpia clusters en cada cambio (`useEffect` sobre `key`).
-
-### Fuera de alcance
-
-- No se toca la normalización de datos en BD.
-- No se cambia la home ni el mapa `/mapa`.
-- No se añade búsqueda fuzzy (Levenshtein) — sigue siendo match por sinónimos + tokens.
+1. **No volver a versionar el archivo `.env`.** Es correcto que esté fuera del control de versiones (ya está excluido) y contenía además datos de una base de datos que ya no se usa. Volver a subirlo apuntaría la web a la base antigua y vacía.
+2. **Republicar desde el estado actual.** El entorno actual ya tiene la configuración correcta inyectada por la plataforma y las páginas cargan; una nueva publicación regenera la vista previa y el sitio con esos valores.
+3. **Verificar tras publicar** inicio, directorio, mapa, una ficha de profesional y registro. Si alguna siguiera mostrando la pantalla de error, el problema sería de inyección de configuración en el entorno publicado y no del código.
+4. **Opcional, limpieza:** `supabase/config.toml` conserva la referencia de la base antigua. No afecta a la web publicada, pero conviene que se regenere para evitar confusiones futuras.
 
 ## Detalles técnicos
 
-- Stopwords ES iniciales: `["de","la","el","los","las","y","o","en","del","al"]`.
-- `matchedPhrase` se guarda en `ParsedQuery` como arrays paralelos: `roles: Array<{ canonical: string; phrase: string }>` (breaking en la firma; `directorio.tsx` es el único consumidor, se adapta).
-- El mapa usa `verified = true` ya garantizado por el `.eq("verified", true)` existente.
+- Puntos de lectura: `src/integrations/supabase/client.ts` usa `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` con respaldo a `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`; `auth-middleware.ts` y las rutas `api/public/seed-*` leen las de servidor. Todos lanzan `Error` si faltan.
+- La pantalla de error procede de `renderErrorPage()` en `src/server.ts` / `src/routes/__root.tsx`, que captura cualquier excepción de renderizado en servidor.
+- Rutas con `loader` que consultan la base durante el renderizado en servidor: `src/routes/profesionales.$slug.tsx` y `src/routes/municipios.$codigo.tsx`; por eso el fallo se ve en toda la navegación y no solo en una página.
