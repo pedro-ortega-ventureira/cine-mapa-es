@@ -28,7 +28,7 @@ describe("readAuthHashType", () => {
 describe("authLinkDestination", () => {
   it("lleva la recuperación que cae en la portada al formulario de contraseña", async () => {
     const { authLinkDestination } = await import("./auth-hash");
-    expect(authLinkDestination("recovery", "/")).toBe("/auth-recovery");
+    expect(authLinkDestination("recovery", "/")).toBe("/auth");
   });
 
   it("lleva la confirmación que cae en la portada al registro", async () => {

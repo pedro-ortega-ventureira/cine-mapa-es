@@ -31,9 +31,9 @@ export const INITIAL_AUTH_LINK_TYPE: AuthLinkType =
 export function authLinkDestination(
   type: AuthLinkType,
   pathname: string,
-): "/auth-recovery" | "/registro" | null {
+):  "/auth" | "/registro" | null {
   if (type !== "recovery" && type !== "signup") return null;
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/registro" || path === "/auth") return null;
-  return type === "recovery" ? "/auth-recovery" : "/registro";
+  return type === "recovery" ?  "/auth" : "/registro";
 }
