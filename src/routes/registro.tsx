@@ -11,6 +11,7 @@ import {
 } from "@/lib/public-registration.functions";
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
+import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,57 @@ function RegistroPage() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
+
+  // Al volver desde el enlace del email, Supabase emite PASSWORD_RECOVERY.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  async function handleForgotPassword() {
+    if (!isValidEmail(authEmail)) {
+      toast.error("Escribe tu email para enviarte el enlace");
+      return;
+    }
+    setResetting(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(authEmail.trim(), {
+        redirectTo: `${window.location.origin}/registro`,
+      });
+    } finally {
+      setResetting(false);
+      // Mensaje genérico siempre: no se enumeran cuentas.
+      toast.success(RESET_SENT_MESSAGE);
+    }
+  }
+
+  async function handleUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+    const problem = validateNewPassword(newPassword, newPassword2);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Contraseña actualizada");
+      setNewPassword("");
+      setNewPassword2("");
+      setRecoveryMode(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
 
   const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
@@ -387,6 +439,49 @@ function RegistroPage() {
     );
   }
 
+  if (recoveryMode) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16">
+        <div className="text-center mb-6">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+            <Film className="h-6 w-6 text-primary" />
+          </div>
+          <h1 className="text-2xl font-semibold">Elige una nueva contraseña</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Escríbela dos veces para confirmar que coinciden.
+          </p>
+        </div>
+        <form onSubmit={handleUpdatePassword} className="space-y-3 border rounded-lg p-6 bg-card">
+          <div>
+            <Label htmlFor="reg-new-password">Nueva contraseña</Label>
+            <Input
+              id="reg-new-password"
+              type="password"
+              required
+              minLength={6}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="reg-new-password-2">Repite la contraseña</Label>
+            <Input
+              id="reg-new-password-2"
+              type="password"
+              required
+              minLength={6}
+              value={newPassword2}
+              onChange={(e) => setNewPassword2(e.target.value)}
+            />
+          </div>
+          <Button type="submit" disabled={authLoading} className="w-full">
+            {authLoading ? "…" : "Guardar contraseña"}
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
@@ -425,6 +520,16 @@ function RegistroPage() {
           <Button type="submit" disabled={authLoading} className="w-full">
             {authLoading ? "…" : authMode === "signin" ? "Entrar" : "Crear cuenta y continuar"}
           </Button>
+          {authMode === "signin" && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground w-full text-center"
+              onClick={handleForgotPassword}
+              disabled={resetting}
+            >
+              {resetting ? "Enviando…" : "¿Has olvidado tu contraseña?"}
+            </button>
+          )}
           <button
             type="button"
             className="text-xs text-muted-foreground hover:text-foreground w-full text-center"
