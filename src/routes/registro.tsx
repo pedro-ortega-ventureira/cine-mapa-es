@@ -12,6 +12,12 @@ import {
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
 import { municipalityResolution, postalCodeForLookup } from "@/lib/postal-code";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
+import {
+  afterPasswordRecoveryUpdate,
+  afterSignUp,
+  SIGNUP_CONFIRM_MESSAGE,
+} from "@/lib/auth-flow";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
