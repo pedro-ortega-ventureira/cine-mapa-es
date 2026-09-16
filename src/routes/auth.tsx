@@ -7,18 +7,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Film } from "lucide-react";
 import { isValidEmail, RESET_SENT_MESSAGE, validateNewPassword } from "@/lib/password-recovery";
-
-type AuthSearch = { recovery?: boolean };
+import { validateAuthSearch } from "@/lib/auth-search";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): AuthSearch => {
-    // El router parsea `recovery=1` como number 1 (no string), y con otros
-    // parsers puede llegar boolean: hay que aceptar todas las formas.
-    const raw = search["recovery"];
-    const active = raw === 1 || raw === "1" || raw === true || raw === "true";
-    return active ? { recovery: true } : {};
-  },
+  validateSearch: validateAuthSearch,
   beforeLoad: async ({ search }) => {
     // Al volver desde el enlace del email hay sesión de recuperación: no se
     // debe saltar al panel, hay que dejar cambiar la contraseña.
