@@ -18,6 +18,8 @@ import {
   serializeSupabasePublicConfig,
 } from "@/integrations/supabase/public-config";
 import { Toaster } from "@/components/ui/sonner";
+import { authLinkDestination, INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+
 
 function NotFoundComponent() {
   return (
@@ -143,6 +145,14 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    // Los enlaces de correo pueden aterrizar en la portada (Site URL). En ese
+    // caso se lleva al usuario a la página que sabe gestionarlos.
+    const destination = authLinkDestination(INITIAL_AUTH_LINK_TYPE, window.location.pathname);
+    if (destination === "/auth") {
+      router.navigate({ to: "/auth", search: { recovery: true }, replace: true });
+    } else if (destination === "/registro") {
+      router.navigate({ to: "/registro", replace: true });
+    }
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
@@ -151,6 +161,7 @@ function RootComponent() {
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
+
 
   return (
     <QueryClientProvider client={queryClient}>
