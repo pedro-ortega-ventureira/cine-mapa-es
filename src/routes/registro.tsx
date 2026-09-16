@@ -155,15 +155,30 @@ function RegistroPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
   const [signupPending, setSignupPending] = useState(false);
+  const [accountConfirmed, setAccountConfirmed] = useState(false);
+  // El tipo de enlace se lee de forma síncrona al cargar el módulo, antes de
+  // que el cliente de Supabase borre el hash (evita la carrera con el evento).
+  const [recoveryFromLink] = useState(() => INITIAL_AUTH_LINK_TYPE === "recovery");
 
-
-  // Al volver desde el enlace del email, Supabase emite PASSWORD_RECOVERY.
   useEffect(() => {
+    if (recoveryFromLink) setRecoveryMode(true);
+    if (INITIAL_AUTH_LINK_TYPE === "signup") {
+      // Enlace de confirmación: la cuenta queda activa pero no se entra.
+      (async () => {
+        const action = afterEmailConfirmation();
+        if (action.signOut) await supabase.auth.signOut();
+        setSession(null);
+        setAuthMode("signin");
+        setAccountConfirmed(true);
+        toast.success(action.message);
+      })();
+    }
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [recoveryFromLink]);
+
 
   async function handleForgotPassword() {
     if (!isValidEmail(authEmail)) {
