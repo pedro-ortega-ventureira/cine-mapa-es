@@ -1,31 +1,22 @@
-# Diagnóstico: «Esta página no cargó» tras el commit 30200661
+# Corrección integral del destino de recuperación
 
-## Qué he comprobado (sin tocar código)
+## Diagnóstico confirmado
+- Verificar el backend usado por producción y conservar la evidencia del correo real sin registrar tokens.
+- Documentar la cadena de redirecciones y el punto exacto donde aparece cualquier destino incorrecto.
+- Tratar los enlaces antiguos como no válidos para comprobar la corrección.
 
-- El commit borró el archivo `.env` que estaba versionado. Contenía la dirección y la clave pública de una base de datos **antigua** (referencia `yriem…`).
-- La base de datos activa del proyecto ahora es **otra** (referencia `dmors…`). La configuración que la plataforma inyecta en el entorno de trabajo apunta a esa base nueva.
-- En el entorno de trabajo actual el archivo de configuración vuelve a existir (lo regenera la plataforma) y las páginas cargan bien: inicio, directorio y registro responden 200, sin errores de arranque ni errores en consola.
-- El código de la aplicación lanza un error explícito cuando faltan la dirección y la clave de la base de datos. Ese error ocurre al pintar la página en el servidor, y la pantalla que se muestra en ese caso es exactamente «Esta página no cargó».
-- El resto de cambios del commit (cabecera, registro, ubicación en mapa) no contienen nada que rompa el renderizado: no he encontrado ningún fallo de compilación ni de ejecución.
-- `supabase/config.toml` sigue apuntando a la referencia antigua `yriem…` (archivo autogenerado, resto informativo).
+## Cambios
+- Definir un único destino compartido: `https://cine-mapa-es.lovable.app/auth?recovery=true`.
+- Usarlo desde `/auth` y `/registro`, eliminando la dependencia de `window.location.origin` para recuperación.
+- Mantener el formulario de nueva contraseña exclusivamente en `/auth`.
+- Añadir pruebas que rechacen `localhost`, cualquier origen distinto y divergencias entre ambas entradas.
 
-## Causa exacta
+## Verificación
+- Ejecutar pruebas y compilación.
+- Generar un segundo correo nuevo desde el backend de producción.
+- Rastrear el enlace sin mostrar tokens y confirmar el formulario, cambio de clave, cierre de sesión temporal, rechazo de la clave anterior y aceptación de la nueva.
+- Eliminar todas las cuentas temporales y publicar la versión final.
 
-La vista previa de ese commit se quedó **sin los datos de conexión a la base de datos**: la aplicación los tomaba del archivo `.env` versionado, y al borrarlo la compilación de esa vista previa se construyó sin ellos. Al no encontrarlos, la aplicación lanza el error "faltan variables de Supabase" mientras genera la página en el servidor, y el sistema responde con la pantalla genérica «Esta página no cargó» en todas las rutas.
-
-No es un fallo del código nuevo del commit, ni de la base de datos (está activa y responde).
-
-Matiz honesto: no tengo acceso a los registros de esa compilación concreta de la vista previa, así que esta causa está deducida del contenido del commit, del comportamiento del código ante configuración ausente y de que el entorno actual, con configuración presente, funciona sin errores.
-
-## Corrección segura para publicar
-
-1. **No volver a versionar el archivo `.env`.** Es correcto que esté fuera del control de versiones (ya está excluido) y contenía además datos de una base de datos que ya no se usa. Volver a subirlo apuntaría la web a la base antigua y vacía.
-2. **Republicar desde el estado actual.** El entorno actual ya tiene la configuración correcta inyectada por la plataforma y las páginas cargan; una nueva publicación regenera la vista previa y el sitio con esos valores.
-3. **Verificar tras publicar** inicio, directorio, mapa, una ficha de profesional y registro. Si alguna siguiera mostrando la pantalla de error, el problema sería de inyección de configuración en el entorno publicado y no del código.
-4. **Opcional, limpieza:** `supabase/config.toml` conserva la referencia de la base antigua. No afecta a la web publicada, pero conviene que se regenere para evitar confusiones futuras.
-
-## Detalles técnicos
-
-- Puntos de lectura: `src/integrations/supabase/client.ts` usa `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` con respaldo a `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`; `auth-middleware.ts` y las rutas `api/public/seed-*` leen las de servidor. Todos lanzan `Error` si faltan.
-- La pantalla de error procede de `renderErrorPage()` en `src/server.ts` / `src/routes/__root.tsx`, que captura cualquier excepción de renderizado en servidor.
-- Rutas con `loader` que consultan la base durante el renderizado en servidor: `src/routes/profesionales.$slug.tsx` y `src/routes/municipios.$codigo.tsx`; por eso el fallo se ve en toda la navegación y no solo en una página.
+## Configuración de correo
+- Inspeccionar los ajustes accesibles de URL, lista permitida, remitente, seguimiento y plantilla real.
+- Si la plantilla administrada no puede leerse o editarse con las herramientas disponibles, indicarlo expresamente sin afirmar una corrección de plantilla no demostrada.
