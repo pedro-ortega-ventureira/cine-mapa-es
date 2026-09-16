@@ -1,7 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,14 +48,6 @@ function AuthPage() {
     }
   }
 
-  async function signInGoogle() {
-    const r = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (r.error) toast.error("No se pudo iniciar sesión con Google");
-    if (!r.redirected && !r.error) navigate({ to: "/admin" });
-  }
-
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <div className="text-center mb-6">
@@ -95,9 +86,6 @@ function AuthPage() {
         </div>
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? "…" : mode === "signin" ? "Entrar" : "Crear cuenta"}
-        </Button>
-        <Button type="button" variant="outline" onClick={signInGoogle} className="w-full">
-          Continuar con Google
         </Button>
         <button
           type="button"

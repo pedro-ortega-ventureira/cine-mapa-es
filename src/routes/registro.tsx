@@ -3,14 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import {
   getMyProfessional,
   registerProfessional,
   updateMyProfessional,
 } from "@/lib/public-registration.functions";
 import { PRIMARY_ROLES, PRODUCTION_TYPES } from "@/lib/constants";
-import { postalCodeForLookup } from "@/lib/postal-code";
+import { postalCodeForLookup, postalCodeRegistrationHint } from "@/lib/postal-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -316,13 +315,6 @@ function RegistroPage() {
     }
   }
 
-  async function signInGoogle() {
-    const r = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/registro",
-    });
-    if (r.error) toast.error("No se pudo iniciar sesión con Google");
-  }
-
   function toggleArrayField(field: "secondary_roles" | "production_types", value: string) {
     setForm((f) => {
       const arr = f[field];
@@ -464,9 +456,6 @@ function RegistroPage() {
           </div>
           <Button type="submit" disabled={authLoading} className="w-full">
             {authLoading ? "…" : authMode === "signin" ? "Entrar" : "Crear cuenta y continuar"}
-          </Button>
-          <Button type="button" variant="outline" onClick={signInGoogle} className="w-full">
-            Continuar con Google
           </Button>
           <button
             type="button"
@@ -623,8 +612,8 @@ function RegistroPage() {
               maxLength={5}
             />
             <Hint>
-              Si identifica un único municipio rural, lo seleccionaremos automáticamente. Comprueba
-              después el municipio: es el que determina tu ubicación en el mapa.
+              {postalCodeRegistrationHint} Si identifica un único municipio rural, lo
+              seleccionaremos automáticamente.
             </Hint>
           </div>
           <div>
