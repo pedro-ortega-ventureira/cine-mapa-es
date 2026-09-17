@@ -7,7 +7,7 @@
  * el suyo. Al ser una constante compartida, /auth y /registro no pueden
  * divergir.
  */
-export const PRODUCTION_ORIGIN = "https://cine-mapa-es.lovable.app";
+export const PRODUCTION_ORIGIN = "https://mapa.xn--espaalatente-dhb.org";
 
 /** Única página que muestra el formulario de nueva contraseña. */
 export const PASSWORD_RECOVERY_REDIRECT_URL = `${PRODUCTION_ORIGIN}/auth?recovery=true`;

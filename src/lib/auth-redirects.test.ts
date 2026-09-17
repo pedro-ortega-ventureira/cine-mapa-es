@@ -18,13 +18,14 @@ describe("destinos de los enlaces de correo", () => {
 
   it("usan siempre el origen de producción", () => {
     for (const url of authRedirects) {
-      expect(new URL(url).origin).toBe("https://cine-mapa-es.lovable.app");
+      expect(new URL(url).origin).toBe("https://mapa.xn--espaalatente-dhb.org");
       expect(isProductionAuthRedirect(url)).toBe(true);
     }
   });
 
   it("rechaza orígenes distintos del de producción", () => {
     expect(isProductionAuthRedirect("http://localhost:3000/auth?recovery=true")).toBe(false);
+    expect(isProductionAuthRedirect("https://cine-mapa-es.lovable.app/auth")).toBe(false);
     expect(isProductionAuthRedirect("https://preview--cine-mapa-es.lovable.app/auth")).toBe(false);
     expect(isProductionAuthRedirect("no-es-una-url")).toBe(false);
   });
