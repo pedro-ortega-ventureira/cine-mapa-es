@@ -398,6 +398,10 @@ export type Database = {
         Returns: boolean;
       };
       increment_profile_views: { Args: { _slug: string }; Returns: undefined };
+      reorder_featured_filmography: {
+        Args: { _item_ids: string[]; _professional_id: string };
+        Returns: undefined;
+      };
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number };
       seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number };
       set_professional_geo_batch: { Args: { _payload: Json }; Returns: number };

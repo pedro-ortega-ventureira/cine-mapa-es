@@ -36,4 +36,14 @@ describe("propiedad de la filmografía", () => {
       }),
     ).toEqual({ ok: false, reason: "not_owned" });
   });
+
+  it("rechaza un reordenado parcial que omite producciones propias", () => {
+    expect(
+      validateFilmographyMutation({
+        kind: "reorder",
+        requestedIds: ["film-1"],
+        ownedIds: ["film-1", "film-2"],
+      }),
+    ).toEqual({ ok: false, reason: "incomplete_set" });
+  });
 });

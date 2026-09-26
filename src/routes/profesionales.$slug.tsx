@@ -70,11 +70,25 @@ export const Route = createFileRoute("/profesionales/$slug")({
       .from("filmography_items")
       .select("*")
       .eq("professional_id", data.id)
+      .eq("featured", true)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true })
       .limit(5);
     if (filmsError) throw filmsError;
-    return { ...data, filmography_items: films ?? [] };
+    if ((films ?? []).length > 0) return { ...data, filmography_items: films ?? [] };
+
+    // Compatibilidad: las fichas históricas pueden tener créditos importados
+    // antes de existir la selección de producciones destacadas. Se muestran
+    // hasta que el profesional elija su primera producción destacada.
+    const { data: legacyFilms, error: legacyFilmsError } = await supabase
+      .from("filmography_items")
+      .select("*")
+      .eq("professional_id", data.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(5);
+    if (legacyFilmsError) throw legacyFilmsError;
+    return { ...data, filmography_items: legacyFilms ?? [] };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {

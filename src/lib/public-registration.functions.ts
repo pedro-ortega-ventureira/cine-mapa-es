@@ -60,8 +60,8 @@ export const publicProfessionalInputSchema = z.object({
   years_of_experience: z.number().int().nullable().optional(),
   languages: z.array(z.string()).optional(),
   availability: z.string().nullable().optional(),
-  works_remotely: z.boolean().optional(),
-  willing_to_travel: z.boolean().optional(),
+  works_remotely: z.boolean().nullable().optional(),
+  willing_to_travel: z.boolean().nullable().optional(),
   reel_url: z.string().nullable().optional(),
   equipment_owned: z.array(z.string()).optional(),
   union_membership: z.string().nullable().optional(),
@@ -72,9 +72,9 @@ export const publicProfessionalInputSchema = z.object({
     .optional()
     .transform((value): SocialLinks => normalizeSocialLinks(value)),
   travel_scope: z.enum(TRAVEL_SCOPES).nullable().optional(),
-  has_own_vehicle: z.boolean().optional(),
-  has_cargo_vehicle: z.boolean().optional(),
-  can_drive_van: z.boolean().optional(),
+  has_own_vehicle: z.boolean().nullable().optional(),
+  has_cargo_vehicle: z.boolean().nullable().optional(),
+  can_drive_van: z.boolean().nullable().optional(),
 });
 
 // El municipio es OBLIGATORIO para darse de alta: la base de datos tiene el
@@ -262,6 +262,7 @@ export const getMyFilmography = createServerFn({ method: "POST" })
       .from("filmography_items")
       .select("*")
       .eq("professional_id", professionalId)
+      .eq("featured", true)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
@@ -280,6 +281,7 @@ export const upsertMyFilmographyItem = createServerFn({ method: "POST" })
         .from("filmography_items")
         .select("professional_id")
         .eq("id", data.id)
+        .eq("featured", true)
         .maybeSingle();
       if (findError) throw new Error(findError.message);
       if (
@@ -298,6 +300,7 @@ export const upsertMyFilmographyItem = createServerFn({ method: "POST" })
         .update(data.item as FilmographyUpdate)
         .eq("id", data.id)
         .eq("professional_id", professionalId)
+        .eq("featured", true)
         .select()
         .single();
       if (error) throw new Error(error.message);
@@ -307,7 +310,8 @@ export const upsertMyFilmographyItem = createServerFn({ method: "POST" })
     const { count, error: countError } = await db
       .from("filmography_items")
       .select("id", { count: "exact", head: true })
-      .eq("professional_id", professionalId);
+      .eq("professional_id", professionalId)
+      .eq("featured", true);
     if (countError) throw new Error(countError.message);
     if (!validateFilmographyMutation({ kind: "insert", existingCount: count ?? 0 }).ok) {
       throw new Error(`Solo puedes destacar ${MAX_FEATURED_PRODUCTIONS} producciones.`);
@@ -343,6 +347,7 @@ export const deleteMyFilmographyItem = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("professional_id", professionalId)
+      .eq("featured", true)
       .select("id")
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -360,7 +365,7 @@ export const reorderMyFilmography = createServerFn({ method: "POST" })
       .from("filmography_items")
       .select("id")
       .eq("professional_id", professionalId)
-      .in("id", data.item_ids);
+      .eq("featured", true);
     if (findError) throw new Error(findError.message);
     if (
       !validateFilmographyMutation({
@@ -372,15 +377,10 @@ export const reorderMyFilmography = createServerFn({ method: "POST" })
       throw new Error("No se pueden reordenar producciones de otro perfil.");
     }
 
-    await Promise.all(
-      data.item_ids.map(async (id, sortOrder) => {
-        const { error } = await db
-          .from("filmography_items")
-          .update({ sort_order: sortOrder })
-          .eq("id", id)
-          .eq("professional_id", professionalId);
-        if (error) throw new Error(error.message);
-      }),
-    );
+    const { error } = await db.rpc("reorder_featured_filmography", {
+      _professional_id: professionalId,
+      _item_ids: data.item_ids,
+    });
+    if (error) throw new Error(error.message);
     return { item_ids: data.item_ids };
   });

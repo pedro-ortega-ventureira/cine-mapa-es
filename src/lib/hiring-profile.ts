@@ -85,10 +85,19 @@ type HiringProfileRow = {
 
 export type HiringFormFields = Record<SocialNetwork, string> & {
   travel_scope: string;
-  has_own_vehicle: boolean;
-  has_cargo_vehicle: boolean;
-  can_drive_van: boolean;
+  has_own_vehicle: "" | "true" | "false";
+  has_cargo_vehicle: "" | "true" | "false";
+  can_drive_van: "" | "true" | "false";
 };
+
+export function formBooleanToNullable(value: "" | "true" | "false"): boolean | null {
+  if (value === "") return null;
+  return value === "true";
+}
+
+export function nullableBooleanToForm(value: boolean | null): "" | "true" | "false" {
+  return value === null ? "" : value ? "true" : "false";
+}
 
 export function rowToHiringFormFields(row: HiringProfileRow): HiringFormFields {
   const socialLinks =
@@ -105,8 +114,8 @@ export function rowToHiringFormFields(row: HiringProfileRow): HiringFormFields {
     vimeo: typeof socialLinks.vimeo === "string" ? socialLinks.vimeo : "",
     youtube: typeof socialLinks.youtube === "string" ? socialLinks.youtube : "",
     travel_scope: row.travel_scope ?? "",
-    has_own_vehicle: !!row.has_own_vehicle,
-    has_cargo_vehicle: !!row.has_cargo_vehicle,
-    can_drive_van: !!row.can_drive_van,
+    has_own_vehicle: nullableBooleanToForm(row.has_own_vehicle),
+    has_cargo_vehicle: nullableBooleanToForm(row.has_cargo_vehicle),
+    can_drive_van: nullableBooleanToForm(row.can_drive_van),
   };
 }

@@ -22,7 +22,12 @@ import {
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
 import { PASSWORD_RECOVERY_REDIRECT_URL, SIGNUP_CONFIRM_REDIRECT_URL } from "@/lib/auth-redirects";
 import { initialRegistrationAuthMode, modeAfterFailedSignIn } from "@/lib/registration-auth";
-import { rowToHiringFormFields, SOCIAL_NETWORKS } from "@/lib/hiring-profile";
+import {
+  formBooleanToNullable,
+  nullableBooleanToForm,
+  rowToHiringFormFields,
+  SOCIAL_NETWORKS,
+} from "@/lib/hiring-profile";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,8 +86,8 @@ type FormState = {
   years_of_experience: string;
   languages: string;
   availability: string;
-  works_remotely: boolean;
-  willing_to_travel: boolean;
+  works_remotely: "" | "true" | "false";
+  willing_to_travel: "" | "true" | "false";
   reel_url: string;
   equipment_owned: string;
   union_membership: string;
@@ -96,9 +101,9 @@ type FormState = {
   vimeo: string;
   youtube: string;
   travel_scope: string;
-  has_own_vehicle: boolean;
-  has_cargo_vehicle: boolean;
-  can_drive_van: boolean;
+  has_own_vehicle: "" | "true" | "false";
+  has_cargo_vehicle: "" | "true" | "false";
+  can_drive_van: "" | "true" | "false";
 };
 
 const emptyForm: FormState = {
@@ -120,8 +125,8 @@ const emptyForm: FormState = {
   years_of_experience: "",
   languages: "",
   availability: "",
-  works_remotely: false,
-  willing_to_travel: false,
+  works_remotely: "",
+  willing_to_travel: "",
   reel_url: "",
   equipment_owned: "",
   union_membership: "",
@@ -135,9 +140,9 @@ const emptyForm: FormState = {
   vimeo: "",
   youtube: "",
   travel_scope: "",
-  has_own_vehicle: false,
-  has_cargo_vehicle: false,
-  can_drive_van: false,
+  has_own_vehicle: "",
+  has_cargo_vehicle: "",
+  can_drive_van: "",
 };
 
 function rowToForm(row: ProfessionalRow): FormState {
@@ -160,8 +165,8 @@ function rowToForm(row: ProfessionalRow): FormState {
     years_of_experience: row.years_of_experience != null ? String(row.years_of_experience) : "",
     languages: (row.languages ?? []).join(", "),
     availability: row.availability ?? "",
-    works_remotely: !!row.works_remotely,
-    willing_to_travel: !!row.willing_to_travel,
+    works_remotely: nullableBooleanToForm(row.works_remotely),
+    willing_to_travel: nullableBooleanToForm(row.willing_to_travel),
     reel_url: row.reel_url ?? "",
     equipment_owned: (row.equipment_owned ?? []).join(", "),
     union_membership: row.union_membership ?? "",
@@ -461,8 +466,8 @@ function RegistroPage() {
               .filter(Boolean)
           : [],
         availability: form.availability || null,
-        works_remotely: form.works_remotely,
-        willing_to_travel: form.willing_to_travel,
+        works_remotely: formBooleanToNullable(form.works_remotely),
+        willing_to_travel: formBooleanToNullable(form.willing_to_travel),
         reel_url: form.reel_url || null,
         equipment_owned: form.equipment_owned
           ? form.equipment_owned
@@ -482,9 +487,9 @@ function RegistroPage() {
           SOCIAL_NETWORKS.map((network) => [network, form[network]]),
         ),
         travel_scope: form.travel_scope || null,
-        has_own_vehicle: form.has_own_vehicle,
-        has_cargo_vehicle: form.has_cargo_vehicle,
-        can_drive_van: form.can_drive_van,
+        has_own_vehicle: formBooleanToNullable(form.has_own_vehicle),
+        has_cargo_vehicle: formBooleanToNullable(form.has_cargo_vehicle),
+        can_drive_van: formBooleanToNullable(form.can_drive_van),
       };
       const row = existing
         ? await updateFn({ data: payload })
@@ -986,47 +991,32 @@ function RegistroPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 pt-1">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.works_remotely}
-                onChange={(e) => setForm({ ...form, works_remotely: e.target.checked })}
-              />
-              Trabaja en remoto
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.willing_to_travel}
-                onChange={(e) => setForm({ ...form, willing_to_travel: e.target.checked })}
-              />
-              Dispuesto/a a viajar
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.has_own_vehicle}
-                onChange={(event) => setForm({ ...form, has_own_vehicle: event.target.checked })}
-              />
-              Vehículo propio
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.has_cargo_vehicle}
-                onChange={(event) => setForm({ ...form, has_cargo_vehicle: event.target.checked })}
-              />
-              Vehículo de carga
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.can_drive_van}
-                onChange={(event) => setForm({ ...form, can_drive_van: event.target.checked })}
-              />
-              Puede conducir furgoneta
-            </label>
+          <div className="grid gap-3 sm:grid-cols-2 pt-1">
+            <BooleanChoice
+              label="Trabaja en remoto"
+              value={form.works_remotely}
+              onChange={(works_remotely) => setForm({ ...form, works_remotely })}
+            />
+            <BooleanChoice
+              label="Dispuesto/a a viajar"
+              value={form.willing_to_travel}
+              onChange={(willing_to_travel) => setForm({ ...form, willing_to_travel })}
+            />
+            <BooleanChoice
+              label="Vehículo propio"
+              value={form.has_own_vehicle}
+              onChange={(has_own_vehicle) => setForm({ ...form, has_own_vehicle })}
+            />
+            <BooleanChoice
+              label="Vehículo de carga"
+              value={form.has_cargo_vehicle}
+              onChange={(has_cargo_vehicle) => setForm({ ...form, has_cargo_vehicle })}
+            />
+            <BooleanChoice
+              label="Puede conducir furgoneta"
+              value={form.can_drive_van}
+              onChange={(can_drive_van) => setForm({ ...form, can_drive_van })}
+            />
           </div>
 
           <div>
@@ -1097,6 +1087,31 @@ function RegistroPage() {
       <div className="mt-10 border-t pt-8">
         <FilmographyEditor profileExists={!!existing} />
       </div>
+    </div>
+  );
+}
+
+function BooleanChoice({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: "" | "true" | "false";
+  onChange: (value: "" | "true" | "false") => void;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <select
+        className={selectClass}
+        value={value}
+        onChange={(event) => onChange(event.target.value as "" | "true" | "false")}
+      >
+        <option value="">No indicado</option>
+        <option value="true">Sí</option>
+        <option value="false">No</option>
+      </select>
     </div>
   );
 }

@@ -6,7 +6,7 @@ export type FilmographyMutation =
   | { kind: "reorder"; requestedIds: string[]; ownedIds: string[] };
 
 export type FilmographyMutationResult =
-  { ok: true } | { ok: false; reason: "limit_reached" | "not_owned" };
+  { ok: true } | { ok: false; reason: "limit_reached" | "not_owned" | "incomplete_set" };
 
 export function ownsFilmographyItem(profileId: string, itemProfessionalId: string): boolean {
   return profileId === itemProfessionalId;
@@ -23,9 +23,12 @@ export function validateFilmographyMutation(
 
   if (mutation.kind === "reorder") {
     const ownedIds = new Set(mutation.ownedIds);
-    return mutation.requestedIds.every((id) => ownedIds.has(id))
+    if (!mutation.requestedIds.every((id) => ownedIds.has(id))) {
+      return { ok: false, reason: "not_owned" };
+    }
+    return mutation.requestedIds.length === ownedIds.size
       ? { ok: true }
-      : { ok: false, reason: "not_owned" };
+      : { ok: false, reason: "incomplete_set" };
   }
 
   return ownsFilmographyItem(mutation.profileId, mutation.itemProfessionalId)

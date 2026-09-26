@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filmographyInputSchema,
+  formBooleanToNullable,
   normalizeSocialLinks,
   rowToHiringFormFields,
   TRAVEL_SCOPES,
@@ -78,9 +79,9 @@ describe("perfil orientado a contratación", () => {
       vimeo: "",
       youtube: "",
       travel_scope: "",
-      has_own_vehicle: false,
-      has_cargo_vehicle: false,
-      can_drive_van: false,
+      has_own_vehicle: "",
+      has_cargo_vehicle: "",
+      can_drive_van: "",
     });
   });
 
@@ -100,9 +101,15 @@ describe("perfil orientado a contratación", () => {
       instagram: "https://instagram.com/cineasta",
       vimeo: "https://vimeo.com/cineasta",
       travel_scope: "international",
-      has_own_vehicle: true,
-      has_cargo_vehicle: false,
-      can_drive_van: true,
+      has_own_vehicle: "true",
+      has_cargo_vehicle: "false",
+      can_drive_van: "true",
     });
+  });
+
+  it("conserva la diferencia entre no indicado, sí y no", () => {
+    expect(formBooleanToNullable("")).toBeNull();
+    expect(formBooleanToNullable("true")).toBe(true);
+    expect(formBooleanToNullable("false")).toBe(false);
   });
 });
