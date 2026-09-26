@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { locationFromMunicipality } from "@/lib/professional-location";
 import { normalizeSocialLinks, TRAVEL_SCOPES, type SocialLinks } from "@/lib/hiring-profile";
+import { filmographyInputSchema } from "@/lib/hiring-profile";
+import { MAX_FEATURED_PRODUCTIONS, validateFilmographyMutation } from "@/lib/filmography-ownership";
 import type { Database } from "@/integrations/supabase/types";
 
 // Self-service registration for professionals. Unlike professionals.functions.ts,
@@ -24,6 +26,8 @@ async function getAdminClient() {
 type AdminClient = Awaited<ReturnType<typeof getAdminClient>>;
 type ProfessionalInsert = Database["public"]["Tables"]["professionals"]["Insert"];
 type ProfessionalUpdate = Database["public"]["Tables"]["professionals"]["Update"];
+type FilmographyInsert = Database["public"]["Tables"]["filmography_items"]["Insert"];
+type FilmographyUpdate = Database["public"]["Tables"]["filmography_items"]["Update"];
 
 const slugify = (s: string) =>
   s
@@ -222,4 +226,161 @@ export const updateMyProfessional = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+const filmographyUpsertSchema = z.object({
+  id: z.string().uuid().optional(),
+  item: filmographyInputSchema,
+});
+
+const filmographyIdSchema = z.object({ id: z.string().uuid() });
+
+const filmographyReorderSchema = z.object({
+  item_ids: z
+    .array(z.string().uuid())
+    .max(MAX_FEATURED_PRODUCTIONS)
+    .refine((ids) => new Set(ids).size === ids.length, "No se pueden repetir producciones"),
+});
+
+async function getOwnedProfessionalId(db: AdminClient, userId: string): Promise<string> {
+  const { data, error } = await db
+    .from("professionals")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("No tienes un perfil todavía. Regístrate primero.");
+  return data.id;
+}
+
+export const getMyFilmography = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await getAdminClient();
+    const professionalId = await getOwnedProfessionalId(db, context.userId);
+    const { data, error } = await db
+      .from("filmography_items")
+      .select("*")
+      .eq("professional_id", professionalId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const upsertMyFilmographyItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => filmographyUpsertSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const db = await getAdminClient();
+    const professionalId = await getOwnedProfessionalId(db, context.userId);
+
+    if (data.id) {
+      const { data: existing, error: findError } = await db
+        .from("filmography_items")
+        .select("professional_id")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (findError) throw new Error(findError.message);
+      if (
+        !existing ||
+        !validateFilmographyMutation({
+          kind: "update",
+          profileId: professionalId,
+          itemProfessionalId: existing.professional_id,
+        }).ok
+      ) {
+        throw new Error("No se ha encontrado esa producción en tu perfil.");
+      }
+
+      const { data: row, error } = await db
+        .from("filmography_items")
+        .update(data.item as FilmographyUpdate)
+        .eq("id", data.id)
+        .eq("professional_id", professionalId)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
+
+    const { count, error: countError } = await db
+      .from("filmography_items")
+      .select("id", { count: "exact", head: true })
+      .eq("professional_id", professionalId);
+    if (countError) throw new Error(countError.message);
+    if (!validateFilmographyMutation({ kind: "insert", existingCount: count ?? 0 }).ok) {
+      throw new Error(`Solo puedes destacar ${MAX_FEATURED_PRODUCTIONS} producciones.`);
+    }
+
+    const payload: FilmographyInsert = {
+      ...data.item,
+      professional_id: professionalId,
+      featured: true,
+    };
+    const { data: row, error } = await db
+      .from("filmography_items")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      if (error.message.includes("Máximo de 5 producciones destacadas")) {
+        throw new Error(`Solo puedes destacar ${MAX_FEATURED_PRODUCTIONS} producciones.`);
+      }
+      throw new Error(error.message);
+    }
+    return row;
+  });
+
+export const deleteMyFilmographyItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => filmographyIdSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const db = await getAdminClient();
+    const professionalId = await getOwnedProfessionalId(db, context.userId);
+    const { data: deleted, error } = await db
+      .from("filmography_items")
+      .delete()
+      .eq("id", data.id)
+      .eq("professional_id", professionalId)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!deleted) throw new Error("No se ha encontrado esa producción en tu perfil.");
+    return { id: deleted.id };
+  });
+
+export const reorderMyFilmography = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => filmographyReorderSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const db = await getAdminClient();
+    const professionalId = await getOwnedProfessionalId(db, context.userId);
+    const { data: ownedItems, error: findError } = await db
+      .from("filmography_items")
+      .select("id")
+      .eq("professional_id", professionalId)
+      .in("id", data.item_ids);
+    if (findError) throw new Error(findError.message);
+    if (
+      !validateFilmographyMutation({
+        kind: "reorder",
+        requestedIds: data.item_ids,
+        ownedIds: (ownedItems ?? []).map((item) => item.id),
+      }).ok
+    ) {
+      throw new Error("No se pueden reordenar producciones de otro perfil.");
+    }
+
+    await Promise.all(
+      data.item_ids.map(async (id, sortOrder) => {
+        const { error } = await db
+          .from("filmography_items")
+          .update({ sort_order: sortOrder })
+          .eq("id", id)
+          .eq("professional_id", professionalId);
+        if (error) throw new Error(error.message);
+      }),
+    );
+    return { item_ids: data.item_ids };
   });
