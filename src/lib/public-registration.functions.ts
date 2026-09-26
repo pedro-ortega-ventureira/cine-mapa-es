@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { locationFromMunicipality } from "@/lib/professional-location";
+import { normalizeSocialLinks, TRAVEL_SCOPES, type SocialLinks } from "@/lib/hiring-profile";
 import type { Database } from "@/integrations/supabase/types";
 
 // Self-service registration for professionals. Unlike professionals.functions.ts,
@@ -36,7 +37,7 @@ const slugify = (s: string) =>
 // residentes en municipios de menos de 20.000 habitantes.
 export const MAX_MUNICIPALITY_POPULATION = 20000;
 
-const publicProfessionalInputSchema = z.object({
+export const publicProfessionalInputSchema = z.object({
   full_name: z.string().min(1),
   alias: z.string().nullable().optional(),
   photo_url: z.string().nullable().optional(),
@@ -62,6 +63,14 @@ const publicProfessionalInputSchema = z.object({
   union_membership: z.string().nullable().optional(),
   nif_cif: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+  social_links: z
+    .unknown()
+    .optional()
+    .transform((value): SocialLinks => normalizeSocialLinks(value)),
+  travel_scope: z.enum(TRAVEL_SCOPES).nullable().optional(),
+  has_own_vehicle: z.boolean().optional(),
+  has_cargo_vehicle: z.boolean().optional(),
+  can_drive_van: z.boolean().optional(),
 });
 
 // El municipio es OBLIGATORIO para darse de alta: la base de datos tiene el
@@ -145,6 +154,7 @@ export const registerProfessional = createServerFn({ method: "POST" })
     const basePayload = {
       ...data,
       email: data.email || null,
+      social_links: normalizeSocialLinks(data.social_links),
       user_id: context.userId,
       municipality_code: municipality.code,
       ...locationFromMunicipality(municipality),
@@ -197,6 +207,7 @@ export const updateMyProfessional = createServerFn({ method: "POST" })
     const payload = {
       ...data,
       email: data.email || null,
+      social_links: normalizeSocialLinks(data.social_links),
       municipality_code: municipality.code,
       ...locationFromMunicipality(municipality),
       verified: true,
