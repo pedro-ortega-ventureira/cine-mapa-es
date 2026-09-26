@@ -51,10 +51,13 @@ export type Database = {
       };
       filmography_items: {
         Row: {
+          countries: string[] | null;
           created_at: string;
           credit_type: Database["public"]["Enums"]["credit_type"] | null;
           custom_note: string | null;
+          external_url: string | null;
           featured: boolean;
+          genre: string | null;
           id: string;
           original_title: string | null;
           poster_url: string | null;
@@ -69,10 +72,13 @@ export type Database = {
           year: number | null;
         };
         Insert: {
+          countries?: string[] | null;
           created_at?: string;
           credit_type?: Database["public"]["Enums"]["credit_type"] | null;
           custom_note?: string | null;
+          external_url?: string | null;
           featured?: boolean;
+          genre?: string | null;
           id?: string;
           original_title?: string | null;
           poster_url?: string | null;
@@ -87,10 +93,13 @@ export type Database = {
           year?: number | null;
         };
         Update: {
+          countries?: string[] | null;
           created_at?: string;
           credit_type?: Database["public"]["Enums"]["credit_type"] | null;
           custom_note?: string | null;
+          external_url?: string | null;
           featured?: boolean;
+          genre?: string | null;
           id?: string;
           original_title?: string | null;
           poster_url?: string | null;
@@ -190,6 +199,7 @@ export type Database = {
           awards: Json | null;
           bio: string | null;
           birth_year: number | null;
+          can_drive_van: boolean | null;
           date_joined: string;
           education: Json | null;
           email: string | null;
@@ -201,6 +211,8 @@ export type Database = {
           geo_lng: number | null;
           geo_municipality_name: string | null;
           geo_province: string | null;
+          has_cargo_vehicle: boolean | null;
+          has_own_vehicle: boolean | null;
           id: string;
           languages: string[] | null;
           municipality_code: string | null;
@@ -218,6 +230,7 @@ export type Database = {
           social_links: Json | null;
           tags: string[] | null;
           tmdb_person_id: number | null;
+          travel_scope: string | null;
           union_membership: string | null;
           updated_at: string;
           user_id: string | null;
@@ -233,6 +246,7 @@ export type Database = {
           awards?: Json | null;
           bio?: string | null;
           birth_year?: number | null;
+          can_drive_van?: boolean | null;
           date_joined?: string;
           education?: Json | null;
           email?: string | null;
@@ -244,6 +258,8 @@ export type Database = {
           geo_lng?: number | null;
           geo_municipality_name?: string | null;
           geo_province?: string | null;
+          has_cargo_vehicle?: boolean | null;
+          has_own_vehicle?: boolean | null;
           id?: string;
           languages?: string[] | null;
           municipality_code?: string | null;
@@ -261,6 +277,7 @@ export type Database = {
           social_links?: Json | null;
           tags?: string[] | null;
           tmdb_person_id?: number | null;
+          travel_scope?: string | null;
           union_membership?: string | null;
           updated_at?: string;
           user_id?: string | null;
@@ -276,6 +293,7 @@ export type Database = {
           awards?: Json | null;
           bio?: string | null;
           birth_year?: number | null;
+          can_drive_van?: boolean | null;
           date_joined?: string;
           education?: Json | null;
           email?: string | null;
@@ -287,6 +305,8 @@ export type Database = {
           geo_lng?: number | null;
           geo_municipality_name?: string | null;
           geo_province?: string | null;
+          has_cargo_vehicle?: boolean | null;
+          has_own_vehicle?: boolean | null;
           id?: string;
           languages?: string[] | null;
           municipality_code?: string | null;
@@ -304,6 +324,7 @@ export type Database = {
           social_links?: Json | null;
           tags?: string[] | null;
           tmdb_person_id?: number | null;
+          travel_scope?: string | null;
           union_membership?: string | null;
           updated_at?: string;
           user_id?: string | null;
@@ -377,6 +398,10 @@ export type Database = {
         Returns: boolean;
       };
       increment_profile_views: { Args: { _slug: string }; Returns: undefined };
+      reorder_featured_filmography: {
+        Args: { _item_ids: string[]; _professional_id: string };
+        Returns: undefined;
+      };
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number };
       seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number };
       set_professional_geo_batch: { Args: { _payload: Json }; Returns: number };

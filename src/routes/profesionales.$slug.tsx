@@ -6,6 +6,7 @@ import { Award, GraduationCap, MapPin, Globe, Languages, Video, ExternalLink } f
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/ContactDialog";
 import { colorForRole } from "@/lib/roles";
+import { publicHiringDetails } from "@/lib/public-profile";
 
 const MunicipalityContourMap = lazy(() =>
   import("@/components/MunicipalityContourMap").then((m) => ({
@@ -37,6 +38,10 @@ export const Route = createFileRoute("/profesionales/$slug")({
       "availability",
       "willing_to_travel",
       "works_remotely",
+      "travel_scope",
+      "has_own_vehicle",
+      "has_cargo_vehicle",
+      "can_drive_van",
       "equipment_owned",
       "union_membership",
       "reel_url",
@@ -55,13 +60,35 @@ export const Route = createFileRoute("/profesionales/$slug")({
     ].join(",");
     const { data, error } = await supabase
       .from("professionals")
-      .select(`${publicCols}, filmography_items(*), municipalities(*)`)
+      .select(`${publicCols}, municipalities(*)`)
       .eq("slug", params.slug)
       .eq("verified", true)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
-    return data;
+    const { data: films, error: filmsError } = await supabase
+      .from("filmography_items")
+      .select("*")
+      .eq("professional_id", data.id)
+      .eq("featured", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(5);
+    if (filmsError) throw filmsError;
+    if ((films ?? []).length > 0) return { ...data, filmography_items: films ?? [] };
+
+    // Compatibilidad: las fichas históricas pueden tener créditos importados
+    // antes de existir la selección de producciones destacadas. Se muestran
+    // hasta que el profesional elija su primera producción destacada.
+    const { data: legacyFilms, error: legacyFilmsError } = await supabase
+      .from("filmography_items")
+      .select("*")
+      .eq("professional_id", data.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(5);
+    if (legacyFilmsError) throw legacyFilmsError;
+    return { ...data, filmography_items: legacyFilms ?? [] };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -113,6 +140,9 @@ function Profile() {
 
   const munic = p.municipalities;
   const films = (p.filmography_items ?? []) as any[];
+  const hiringDetails = publicHiringDetails(p);
+  const hiringFacts = hiringDetails.filter((detail) => !detail.href);
+  const socialLinks = hiringDetails.filter((detail) => detail.href);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -166,7 +196,7 @@ function Profile() {
             ))}
           </div>
 
-          {(p.email || p.website) && (
+          {(p.id || p.website || p.reel_url || socialLinks.length > 0) && (
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
               <ContactDialog professionalId={p.id} professionalName={p.full_name} />
               {p.website && (
@@ -189,6 +219,17 @@ function Profile() {
                   <Video className="h-4 w-4" /> Showreel
                 </a>
               )}
+              {socialLinks.map((detail) => (
+                <a
+                  key={detail.key}
+                  href={detail.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> {detail.label}
+                </a>
+              ))}
             </div>
           )}
         </div>
@@ -230,6 +271,20 @@ function Profile() {
           </p>
         )}
       </div>
+
+      {hiringFacts.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold mb-3">Contratación y movilidad</h2>
+          <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {hiringFacts.map((detail) => (
+              <div key={detail.key} className="rounded-md border bg-card px-3 py-2">
+                <dt className="text-xs text-muted-foreground">{detail.label}</dt>
+                <dd className="text-sm font-medium">{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {films.length > 0 && (
         <section className="mt-10">
@@ -331,6 +386,17 @@ function Profile() {
                       <span className="font-medium">{filmModal.role_in_production}</span>
                     </p>
                   )}
+                  {filmModal.countries?.length > 0 && (
+                    <p>
+                      <span className="text-muted-foreground">Países:</span>{" "}
+                      {filmModal.countries.join(", ")}
+                    </p>
+                  )}
+                  {filmModal.genre && (
+                    <p>
+                      <span className="text-muted-foreground">Género:</span> {filmModal.genre}
+                    </p>
+                  )}
                   {filmModal.synopsis && (
                     <p className="text-muted-foreground">{filmModal.synopsis}</p>
                   )}
@@ -340,12 +406,22 @@ function Profile() {
                   {filmModal.custom_note && (
                     <p className="text-xs italic border-l-2 pl-2 mt-2">{filmModal.custom_note}</p>
                   )}
+                  {filmModal.external_url && (
+                    <a
+                      href={filmModal.external_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      Ver producción <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                   {filmModal.tmdb_id && (
                     <a
                       href={`https://www.themoviedb.org/${filmModal.type}/${filmModal.tmdb_id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="ml-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     >
                       Ver en TMDB <ExternalLink className="h-3 w-3" />
                     </a>
