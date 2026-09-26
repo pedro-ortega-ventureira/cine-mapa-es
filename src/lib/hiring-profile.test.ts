@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filmographyInputSchema, normalizeSocialLinks, TRAVEL_SCOPES } from "./hiring-profile";
+import {
+  filmographyInputSchema,
+  normalizeSocialLinks,
+  rowToHiringFormFields,
+  TRAVEL_SCOPES,
+} from "./hiring-profile";
 
 describe("perfil orientado a contratación", () => {
   it("usa los cuatro radios de desplazamiento acordados", () => {
@@ -53,5 +58,51 @@ describe("perfil orientado a contratación", () => {
     });
 
     expect(production.countries).toEqual(["España", "Portugal"]);
+  });
+
+  it("convierte valores nulos de contratación en campos vacíos", () => {
+    expect(
+      rowToHiringFormFields({
+        social_links: null,
+        travel_scope: null,
+        has_own_vehicle: null,
+        has_cargo_vehicle: null,
+        can_drive_van: null,
+      }),
+    ).toEqual({
+      instagram: "",
+      tiktok: "",
+      linkedin: "",
+      facebook: "",
+      x: "",
+      vimeo: "",
+      youtube: "",
+      travel_scope: "",
+      has_own_vehicle: false,
+      has_cargo_vehicle: false,
+      can_drive_van: false,
+    });
+  });
+
+  it("restaura literalmente redes y movilidad guardadas", () => {
+    expect(
+      rowToHiringFormFields({
+        social_links: {
+          instagram: "https://instagram.com/cineasta",
+          vimeo: "https://vimeo.com/cineasta",
+        },
+        travel_scope: "international",
+        has_own_vehicle: true,
+        has_cargo_vehicle: false,
+        can_drive_van: true,
+      }),
+    ).toMatchObject({
+      instagram: "https://instagram.com/cineasta",
+      vimeo: "https://vimeo.com/cineasta",
+      travel_scope: "international",
+      has_own_vehicle: true,
+      has_cargo_vehicle: false,
+      can_drive_van: true,
+    });
   });
 });

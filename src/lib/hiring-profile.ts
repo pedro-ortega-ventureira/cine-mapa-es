@@ -74,3 +74,39 @@ export const filmographyInputSchema = z.object({
 });
 
 export type FilmographyInput = z.infer<typeof filmographyInputSchema>;
+
+type HiringProfileRow = {
+  social_links: unknown;
+  travel_scope: string | null;
+  has_own_vehicle: boolean | null;
+  has_cargo_vehicle: boolean | null;
+  can_drive_van: boolean | null;
+};
+
+export type HiringFormFields = Record<SocialNetwork, string> & {
+  travel_scope: string;
+  has_own_vehicle: boolean;
+  has_cargo_vehicle: boolean;
+  can_drive_van: boolean;
+};
+
+export function rowToHiringFormFields(row: HiringProfileRow): HiringFormFields {
+  const socialLinks =
+    row.social_links && typeof row.social_links === "object" && !Array.isArray(row.social_links)
+      ? (row.social_links as Record<string, unknown>)
+      : {};
+
+  return {
+    instagram: typeof socialLinks.instagram === "string" ? socialLinks.instagram : "",
+    tiktok: typeof socialLinks.tiktok === "string" ? socialLinks.tiktok : "",
+    linkedin: typeof socialLinks.linkedin === "string" ? socialLinks.linkedin : "",
+    facebook: typeof socialLinks.facebook === "string" ? socialLinks.facebook : "",
+    x: typeof socialLinks.x === "string" ? socialLinks.x : "",
+    vimeo: typeof socialLinks.vimeo === "string" ? socialLinks.vimeo : "",
+    youtube: typeof socialLinks.youtube === "string" ? socialLinks.youtube : "",
+    travel_scope: row.travel_scope ?? "",
+    has_own_vehicle: !!row.has_own_vehicle,
+    has_cargo_vehicle: !!row.has_cargo_vehicle,
+    can_drive_van: !!row.can_drive_van,
+  };
+}

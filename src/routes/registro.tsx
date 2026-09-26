@@ -22,6 +22,7 @@ import {
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
 import { PASSWORD_RECOVERY_REDIRECT_URL, SIGNUP_CONFIRM_REDIRECT_URL } from "@/lib/auth-redirects";
 import { initialRegistrationAuthMode, modeAfterFailedSignIn } from "@/lib/registration-auth";
+import { rowToHiringFormFields, SOCIAL_NETWORKS } from "@/lib/hiring-profile";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import { toast } from "sonner";
 import { Film, CheckCircle2, Info } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { FilmographyEditor } from "@/components/FilmographyEditor";
 
 export const Route = createFileRoute("/registro")({
   ssr: false,
@@ -86,6 +88,17 @@ type FormState = {
   union_membership: string;
   nif_cif: string;
   tags: string;
+  instagram: string;
+  tiktok: string;
+  linkedin: string;
+  facebook: string;
+  x: string;
+  vimeo: string;
+  youtube: string;
+  travel_scope: string;
+  has_own_vehicle: boolean;
+  has_cargo_vehicle: boolean;
+  can_drive_van: boolean;
 };
 
 const emptyForm: FormState = {
@@ -114,6 +127,17 @@ const emptyForm: FormState = {
   union_membership: "",
   nif_cif: "",
   tags: "",
+  instagram: "",
+  tiktok: "",
+  linkedin: "",
+  facebook: "",
+  x: "",
+  vimeo: "",
+  youtube: "",
+  travel_scope: "",
+  has_own_vehicle: false,
+  has_cargo_vehicle: false,
+  can_drive_van: false,
 };
 
 function rowToForm(row: ProfessionalRow): FormState {
@@ -143,6 +167,7 @@ function rowToForm(row: ProfessionalRow): FormState {
     union_membership: row.union_membership ?? "",
     nif_cif: row.nif_cif ?? "",
     tags: (row.tags ?? []).join(", "),
+    ...rowToHiringFormFields(row),
   };
 }
 
@@ -453,6 +478,13 @@ function RegistroPage() {
               .map((s) => s.trim())
               .filter(Boolean)
           : [],
+        social_links: Object.fromEntries(
+          SOCIAL_NETWORKS.map((network) => [network, form[network]]),
+        ),
+        travel_scope: form.travel_scope || null,
+        has_own_vehicle: form.has_own_vehicle,
+        has_cargo_vehicle: form.has_cargo_vehicle,
+        can_drive_van: form.can_drive_van,
       };
       const row = existing
         ? await updateFn({ data: payload })
@@ -841,10 +873,11 @@ function RegistroPage() {
               <Hint>No se publica. Opcional.</Hint>
             </div>
             <div>
-              <Label>Web</Label>
+              <Label>Web o portfolio</Label>
               <Input
                 value={form.website}
                 onChange={(e) => setForm({ ...form, website: e.target.value })}
+                placeholder="https://…"
               />
             </div>
             <div>
@@ -853,6 +886,22 @@ function RegistroPage() {
                 value={form.reel_url}
                 onChange={(e) => setForm({ ...form, reel_url: e.target.value })}
               />
+            </div>
+          </div>
+          <div>
+            <Label className="mb-2 block">Redes y plataformas profesionales</Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {SOCIAL_NETWORKS.map((network) => (
+                <div key={network}>
+                  <Label className="capitalize">{network === "x" ? "X" : network}</Label>
+                  <Input
+                    type="url"
+                    value={form[network]}
+                    onChange={(event) => setForm({ ...form, [network]: event.target.value })}
+                    placeholder="https://…"
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -921,6 +970,20 @@ function RegistroPage() {
                 placeholder="Cámara, dron…"
               />
             </div>
+            <div>
+              <Label>Ámbito de desplazamiento</Label>
+              <select
+                className={selectClass}
+                value={form.travel_scope}
+                onChange={(event) => setForm({ ...form, travel_scope: event.target.value })}
+              >
+                <option value="">—</option>
+                <option value="local">Local</option>
+                <option value="provincial">Provincial</option>
+                <option value="national">Nacional</option>
+                <option value="international">Internacional</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-4 pt-1">
@@ -939,6 +1002,30 @@ function RegistroPage() {
                 onChange={(e) => setForm({ ...form, willing_to_travel: e.target.checked })}
               />
               Dispuesto/a a viajar
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.has_own_vehicle}
+                onChange={(event) => setForm({ ...form, has_own_vehicle: event.target.checked })}
+              />
+              Vehículo propio
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.has_cargo_vehicle}
+                onChange={(event) => setForm({ ...form, has_cargo_vehicle: event.target.checked })}
+              />
+              Vehículo de carga
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.can_drive_van}
+                onChange={(event) => setForm({ ...form, can_drive_van: event.target.checked })}
+              />
+              Puede conducir furgoneta
             </label>
           </div>
 
@@ -1006,6 +1093,10 @@ function RegistroPage() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-10 border-t pt-8">
+        <FilmographyEditor profileExists={!!existing} />
+      </div>
     </div>
   );
 }
