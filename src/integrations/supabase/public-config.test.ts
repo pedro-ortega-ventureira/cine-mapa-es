@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  getSupabasePublicConfig,
-  serializeSupabasePublicConfig,
-} from "./public-config";
+import { getSupabasePublicConfig, serializeSupabasePublicConfig } from "./public-config";
 
 const originalConfig = globalThis.__SUPABASE_PUBLIC_CONFIG__;
 
@@ -18,9 +15,9 @@ describe("Supabase public config", () => {
       projectId: "public-project",
     };
 
-    expect(
-      getSupabasePublicConfig({}, globalThis.__SUPABASE_PUBLIC_CONFIG__, {}),
-    ).toEqual(globalThis.__SUPABASE_PUBLIC_CONFIG__);
+    expect(getSupabasePublicConfig({}, globalThis.__SUPABASE_PUBLIC_CONFIG__, {})).toEqual(
+      globalThis.__SUPABASE_PUBLIC_CONFIG__,
+    );
   });
 
   it("escapes HTML-significant opening brackets in the inline script", () => {

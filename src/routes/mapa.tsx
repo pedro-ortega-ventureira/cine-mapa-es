@@ -57,23 +57,28 @@ function MapPage() {
       // Paginado: `.limit(5000)` no sube el tope de 1.000 filas de PostgREST
       // (ver src/lib/fetch-all.ts). Con 117 fichas aún no truncaba, pero el
       // mapa es justo lo que más crece.
-      const data = await fetchAllRows<Row>((from, to) =>
-        supabase
-          .from("professionals")
-          .select(
-            "id,slug,full_name,alias,photo_url,primary_role,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
-          )
-          .eq("verified", true)
-          .order("id")
-          .range(from, to) as any,
+      const data = await fetchAllRows<Row>(
+        (from, to) =>
+          supabase
+            .from("professionals")
+            .select(
+              "id,slug,full_name,alias,photo_url,primary_role,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
+            )
+            .eq("verified", true)
+            .order("id")
+            .range(from, to) as any,
       );
       return data as unknown as Row[];
     },
   });
 
-  const all = q.data ?? [];
+  const all = useMemo(() => q.data ?? [], [q.data]);
   const geolocated = useMemo(
-    () => all.filter((r) => r.geo_lat != null && r.geo_lng != null && r.geo_accuracy && r.geo_accuracy !== "none"),
+    () =>
+      all.filter(
+        (r) =>
+          r.geo_lat != null && r.geo_lng != null && r.geo_accuracy && r.geo_accuracy !== "none",
+      ),
     [all],
   );
   const exact = geolocated.filter((r) => r.geo_accuracy === "exact");
@@ -103,7 +108,9 @@ function MapPage() {
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mapa de profesionales verificados</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Mapa de profesionales verificados
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Cada punto es una persona verificada. Los grupos se abren al hacer zoom.
           </p>
@@ -121,22 +128,40 @@ function MapPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-sm">
-        <Stat icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />} label="Verificados" value={all.length} />
-        <Stat icon={<MapPin className="h-4 w-4 text-primary" />} label="Ubicación exacta" value={exact.length} />
-        <Stat icon={<HelpCircle className="h-4 w-4 text-amber-600" />} label="Aproximados (provincia)" value={approx.length} />
-        <Stat icon={<HelpCircle className="h-4 w-4 text-muted-foreground" />} label="Sin geolocalizar" value={pending} />
+        <Stat
+          icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
+          label="Verificados"
+          value={all.length}
+        />
+        <Stat
+          icon={<MapPin className="h-4 w-4 text-primary" />}
+          label="Ubicación exacta"
+          value={exact.length}
+        />
+        <Stat
+          icon={<HelpCircle className="h-4 w-4 text-amber-600" />}
+          label="Aproximados (provincia)"
+          value={approx.length}
+        />
+        <Stat
+          icon={<HelpCircle className="h-4 w-4 text-muted-foreground" />}
+          label="Sin geolocalizar"
+          value={pending}
+        />
       </div>
 
       {q.isLoading || !mounted ? (
         <div className="rounded-lg border bg-muted animate-pulse" style={{ height: 480 }} />
       ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Aún no hay profesionales geolocalizados. Un administrador puede pulsar
-          "Resolver geolocalización" en el panel de profesionales.
+          Aún no hay profesionales geolocalizados. Un administrador puede pulsar "Resolver
+          geolocalización" en el panel de profesionales.
         </div>
       ) : (
         <Suspense
-          fallback={<div className="rounded-lg border bg-muted animate-pulse" style={{ height: 480 }} />}
+          fallback={
+            <div className="rounded-lg border bg-muted animate-pulse" style={{ height: 480 }} />
+          }
         >
           <ProfessionalsLeafletMap professionals={visible} />
         </Suspense>
@@ -144,12 +169,16 @@ function MapPage() {
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-4 w-4 rounded-full bg-primary border-2 border-white shadow" /> Ubicación exacta (foto del profesional)
+          <span className="inline-block h-4 w-4 rounded-full bg-primary border-2 border-white shadow" />{" "}
+          Ubicación exacta (foto del profesional)
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white border-dashed" /> Aproximada (centroide de provincia)
+          <span className="inline-block h-3 w-3 rounded-full bg-gray-400 border border-white border-dashed" />{" "}
+          Aproximada (centroide de provincia)
         </span>
-        <span className="ml-auto">Fondo: municipios &lt; 20.000 hab. — más intenso = menos habitantes</span>
+        <span className="ml-auto">
+          Fondo: municipios &lt; 20.000 hab. — más intenso = menos habitantes
+        </span>
       </div>
     </div>
   );

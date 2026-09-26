@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Award, GraduationCap, MapPin, Globe, Languages, Mail, Video, ExternalLink } from "lucide-react";
+import { Award, GraduationCap, MapPin, Globe, Languages, Video, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/ContactDialog";
 import { colorForRole } from "@/lib/roles";
@@ -16,13 +16,42 @@ const MunicipalityContourMap = lazy(() =>
 export const Route = createFileRoute("/profesionales/$slug")({
   loader: async ({ params }) => {
     const publicCols = [
-      "id","slug","full_name","alias","photo_url","primary_role","secondary_roles",
-      "production_types","municipality_code","tags","bio","awards","education",
-      "languages","nationality","gender","birth_year","years_of_experience",
-      "availability","willing_to_travel","works_remotely","equipment_owned",
-      "union_membership","reel_url","website","social_links","verified",
-      "date_joined","updated_at","profile_views","geo_lat","geo_lng","geo_accuracy",
-      "geo_municipality_name","geo_province","raw_postal_code",
+      "id",
+      "slug",
+      "full_name",
+      "alias",
+      "photo_url",
+      "primary_role",
+      "secondary_roles",
+      "production_types",
+      "municipality_code",
+      "tags",
+      "bio",
+      "awards",
+      "education",
+      "languages",
+      "nationality",
+      "gender",
+      "birth_year",
+      "years_of_experience",
+      "availability",
+      "willing_to_travel",
+      "works_remotely",
+      "equipment_owned",
+      "union_membership",
+      "reel_url",
+      "website",
+      "social_links",
+      "verified",
+      "date_joined",
+      "updated_at",
+      "profile_views",
+      "geo_lat",
+      "geo_lng",
+      "geo_accuracy",
+      "geo_municipality_name",
+      "geo_province",
+      "raw_postal_code",
     ].join(",");
     const { data, error } = await supabase
       .from("professionals")
@@ -42,7 +71,12 @@ export const Route = createFileRoute("/profesionales/$slug")({
     return {
       meta: [
         { title: `${p.full_name} — Directorio audiovisual rural` },
-        { name: "description", content: p.bio?.slice(0, 160) ?? `${p.primary_role ?? "Profesional del audiovisual"} en ${p.municipalities?.name ?? "España rural"}` },
+        {
+          name: "description",
+          content:
+            p.bio?.slice(0, 160) ??
+            `${p.primary_role ?? "Profesional del audiovisual"} en ${p.municipalities?.name ?? "España rural"}`,
+        },
         { property: "og:title", content: p.full_name },
         { property: "og:description", content: p.bio?.slice(0, 160) ?? "" },
         ...(p.photo_url ? [{ property: "og:image", content: p.photo_url }] : []),
@@ -69,7 +103,9 @@ function Profile() {
   const p = Route.useLoaderData() as any;
   const [filmModal, setFilmModal] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     supabase.rpc("increment_profile_views", { _slug: p.slug } as any).then(() => {});
@@ -103,7 +139,7 @@ function Profile() {
             <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
               <MapPin className="h-4 w-4" />
               {p.raw_postal_code ? <span>CP {p.raw_postal_code}</span> : null}
-              {(p.raw_postal_code && (munic || p.geo_municipality_name || p.geo_province)) ? (
+              {p.raw_postal_code && (munic || p.geo_municipality_name || p.geo_province) ? (
                 <span className="text-muted-foreground/60">·</span>
               ) : null}
               {munic ? (
@@ -112,9 +148,7 @@ function Profile() {
                   {munic.autonomous_community ? `, ${munic.autonomous_community}` : ""}
                 </span>
               ) : (
-                <span>
-                  {[p.geo_municipality_name, p.geo_province].filter(Boolean).join(", ")}
-                </span>
+                <span>{[p.geo_municipality_name, p.geo_province].filter(Boolean).join(", ")}</span>
               )}
             </p>
           )}
@@ -126,10 +160,7 @@ function Profile() {
               </span>
             ))}
             {(p.production_types ?? []).map((t: string) => (
-              <span
-                key={t}
-                className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5"
-              >
+              <span key={t} className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5">
                 {t}
               </span>
             ))}
@@ -168,7 +199,9 @@ function Profile() {
           <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
             <MapPin className="h-4 w-4" /> Ubicación
           </h2>
-          <Suspense fallback={<div className="h-[260px] rounded-md border bg-muted/40 animate-pulse" />}>
+          <Suspense
+            fallback={<div className="h-[260px] rounded-md border bg-muted/40 animate-pulse" />}
+          >
             {mounted ? (
               <MunicipalityContourMap
                 municipalityCode={munic?.code ?? null}
@@ -197,9 +230,6 @@ function Profile() {
           </p>
         )}
       </div>
-
-
-
 
       {films.length > 0 && (
         <section className="mt-10">
@@ -247,7 +277,9 @@ function Profile() {
                 <span className="font-medium">{a.award}</span>
                 {a.festival && <span className="text-muted-foreground"> · {a.festival}</span>}
                 {a.year && <span className="text-muted-foreground"> · {a.year}</span>}
-                {a.production && <div className="text-xs text-muted-foreground">{a.production}</div>}
+                {a.production && (
+                  <div className="text-xs text-muted-foreground">{a.production}</div>
+                )}
               </li>
             ))}
           </ul>
@@ -299,7 +331,9 @@ function Profile() {
                       <span className="font-medium">{filmModal.role_in_production}</span>
                     </p>
                   )}
-                  {filmModal.synopsis && <p className="text-muted-foreground">{filmModal.synopsis}</p>}
+                  {filmModal.synopsis && (
+                    <p className="text-muted-foreground">{filmModal.synopsis}</p>
+                  )}
                   {filmModal.tmdb_rating != null && (
                     <p className="text-xs">⭐ {Number(filmModal.tmdb_rating).toFixed(1)} en TMDB</p>
                   )}
@@ -322,9 +356,6 @@ function Profile() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* references to unused imports to satisfy tree-shaker */}
-      {false && <Mail />}
     </div>
   );
 }

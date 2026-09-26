@@ -25,20 +25,17 @@ export const Route = createFileRoute("/api/public/seed-municipalities")({
             auth: { persistSession: false, autoRefreshToken: false },
           });
 
-          const { data: claimsData, error: claimsError } =
-            await supabase.auth.getClaims(token);
+          const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
           const userId = claimsData?.claims?.sub as string | undefined;
           if (claimsError || !userId) {
             return Response.json({ error: "Unauthorized" }, { status: 401 });
           }
 
-          const { supabaseAdmin } = await import(
-            "@/integrations/supabase/client.server"
-          );
-          const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc(
-            "has_role",
-            { _user_id: userId, _role: "admin" },
-          );
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
+            _user_id: userId,
+            _role: "admin",
+          });
           if (roleError || !isAdmin) {
             return Response.json({ error: "Forbidden" }, { status: 403 });
           }

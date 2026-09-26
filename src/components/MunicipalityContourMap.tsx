@@ -60,7 +60,8 @@ export function MunicipalityContourMap({
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       subdomains: "abcd",
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
 
     let cancelled = false;
@@ -76,7 +77,8 @@ export function MunicipalityContourMap({
         const props: any = f.properties ?? {};
         const ine = String(props.codigo_ine ?? "").padStart(5, "0");
         if (codeStr && ine === codeStr) return true;
-        if (!codeStr && nameNorm && String(props.municipio ?? "").toLowerCase() === nameNorm) return true;
+        if (!codeStr && nameNorm && String(props.municipio ?? "").toLowerCase() === nameNorm)
+          return true;
         return false;
       });
 
@@ -115,7 +117,9 @@ export function MunicipalityContourMap({
           });
           L.marker(center, { icon: labelIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
           map.fitBounds(layer.getBounds(), { padding: [28, 28], maxZoom: 13 });
-        } catch {}
+        } catch {
+          // Some malformed geometries have no bounds; the base map still works.
+        }
       } else if (lat != null && lng != null) {
         map.setView([lat, lng], 11);
       }
@@ -140,8 +144,9 @@ export function MunicipalityContourMap({
 }
 
 function escapeHtml(s: string) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 }
 

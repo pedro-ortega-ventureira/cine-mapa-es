@@ -89,6 +89,7 @@ export function MunicipalitiesChoroplethMap({
     if (!mainContainerRef.current || mainMapRef.current) return;
 
     const mainContainer = mainContainerRef.current;
+    const insetContainer = insetContainerRef.current;
     mainContainer.innerHTML = "";
     (mainContainer as any)._leaflet_id = null;
 
@@ -113,8 +114,7 @@ export function MunicipalitiesChoroplethMap({
     if (proPane) proPane.style.zIndex = "650";
     mainMapRef.current = main;
 
-    if (insetContainerRef.current) {
-      const insetContainer = insetContainerRef.current;
+    if (insetContainer) {
       insetContainer.innerHTML = "";
       (insetContainer as any)._leaflet_id = null;
       const inset = L.map(insetContainer, {
@@ -137,7 +137,7 @@ export function MunicipalitiesChoroplethMap({
       main.invalidateSize();
       insetMapRef.current?.invalidateSize();
     });
-    ro.observe(mainContainerRef.current);
+    ro.observe(mainContainer);
 
     return () => {
       ro.disconnect();
@@ -149,13 +149,11 @@ export function MunicipalitiesChoroplethMap({
       insetLayerRef.current = null;
       mainProsRef.current = null;
       insetProsRef.current = null;
-      if (mainContainerRef.current) {
-        mainContainerRef.current.innerHTML = "";
-        (mainContainerRef.current as any)._leaflet_id = null;
-      }
-      if (insetContainerRef.current) {
-        insetContainerRef.current.innerHTML = "";
-        (insetContainerRef.current as any)._leaflet_id = null;
+      mainContainer.innerHTML = "";
+      (mainContainer as any)._leaflet_id = null;
+      if (insetContainer) {
+        insetContainer.innerHTML = "";
+        (insetContainer as any)._leaflet_id = null;
       }
     };
   }, []);
@@ -175,7 +173,9 @@ export function MunicipalitiesChoroplethMap({
         return code ? (overlayMap.get(code)?.professionals_count ?? 0) > 0 : false;
       };
 
-      const peninsulaFeatures = geo.features.filter((f) => !isCanariasFeature(f) && shouldInclude(f));
+      const peninsulaFeatures = geo.features.filter(
+        (f) => !isCanariasFeature(f) && shouldInclude(f),
+      );
       const canariasFeatures = geo.features.filter((f) => isCanariasFeature(f) && shouldInclude(f));
 
       const styleFn: L.StyleFunction = (feature) => {
@@ -192,42 +192,42 @@ export function MunicipalitiesChoroplethMap({
         };
       };
 
-      const createBindFeature = (targetMap: L.Map, isInset: boolean) => (feature: GeoJSON.Feature, lyr: L.Layer) => {
-        const props = feature.properties as any;
-        const code = props?.codigo_ine as string;
-        const name = props?.municipio as string;
-        const prov = props?.provincia as string;
-        const pop = Number(props?.habitantes ?? 0);
-        const ov = overlayMap.get(code);
-        const hasPros = ov && ov.professionals_count > 0;
-        const proText =
-          hasPros
+      const createBindFeature =
+        (targetMap: L.Map, isInset: boolean) => (feature: GeoJSON.Feature, lyr: L.Layer) => {
+          const props = feature.properties as any;
+          const code = props?.codigo_ine as string;
+          const name = props?.municipio as string;
+          const prov = props?.provincia as string;
+          const pop = Number(props?.habitantes ?? 0);
+          const ov = overlayMap.get(code);
+          const hasPros = ov && ov.professionals_count > 0;
+          const proText = hasPros
             ? `<div style="margin-top:4px;color:#2563eb;font-weight:600">${ov.professionals_count} profesional${ov.professionals_count !== 1 ? "es" : ""}${
-                typeof ov.verified_count === "number" && ov.verified_count !== ov.professionals_count
+                typeof ov.verified_count === "number" &&
+                ov.verified_count !== ov.professionals_count
                   ? ` · ${ov.verified_count} verif.`
                   : ""
               }</div>`
             : "";
-        (lyr as L.Path).bindTooltip(
-          `<div style="font-family:system-ui;line-height:1.35">
+          (lyr as L.Path).bindTooltip(
+            `<div style="font-family:system-ui;line-height:1.35">
             <div style="font-weight:600">${escapeHtml(name)}</div>
             <div style="font-size:11px;color:#64748b">${escapeHtml(prov)}</div>
             <div style="font-size:11px;color:#64748b">${pop.toLocaleString("es-ES")} hab.</div>
             ${proText}
           </div>`,
-          { sticky: true, direction: "top", opacity: 0.95 },
-        );
-        if (onSelectMunicipality) {
-          lyr.on("click", () => onSelectMunicipality(code));
-        }
-        lyr.on("mouseover", (e) => {
-          (e.target as L.Path).setStyle({ weight: 2, color: "#0f172a" });
-        });
-        lyr.on("mouseout", (e) => {
-          (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
-        });
-
-      };
+            { sticky: true, direction: "top", opacity: 0.95 },
+          );
+          if (onSelectMunicipality) {
+            lyr.on("click", () => onSelectMunicipality(code));
+          }
+          lyr.on("mouseover", (e) => {
+            (e.target as L.Path).setStyle({ weight: 2, color: "#0f172a" });
+          });
+          lyr.on("mouseout", (e) => {
+            (e.target as L.Path).setStyle(styleFn(feature) as L.PathOptions);
+          });
+        };
 
       if (mainLayerRef.current) {
         mainLayerRef.current.remove();
@@ -291,9 +291,10 @@ export function MunicipalitiesChoroplethMap({
     // Group by postal_code (fallback: rounded lat/lng)
     const groups = new Map<string, MapProfessional[]>();
     for (const p of valid) {
-      const key = p.postal_code && p.postal_code.trim()
-        ? `cp:${p.postal_code.trim()}`
-        : `xy:${p.geo_lat!.toFixed(4)}|${p.geo_lng!.toFixed(4)}`;
+      const key =
+        p.postal_code && p.postal_code.trim()
+          ? `cp:${p.postal_code.trim()}`
+          : `xy:${p.geo_lat!.toFixed(4)}|${p.geo_lng!.toFixed(4)}`;
       const arr = groups.get(key) ?? [];
       arr.push(p);
       groups.set(key, arr);
@@ -376,7 +377,6 @@ export function MunicipalitiesChoroplethMap({
         );
         marker.addTo(target);
       }
-
     }
   }, [professionals]);
 
@@ -388,13 +388,21 @@ export function MunicipalitiesChoroplethMap({
         role="region"
         aria-label="Mapa coroplético de municipios de España menores de 20.000 habitantes"
       >
-        <div ref={mainContainerRef} className="absolute inset-0" style={{ background: "#f8fafc" }} />
+        <div
+          ref={mainContainerRef}
+          className="absolute inset-0"
+          style={{ background: "#f8fafc" }}
+        />
         <div
           className="absolute bottom-2 left-2 rounded-md border-2 border-slate-300 bg-white shadow-md overflow-hidden"
           style={{ width: 180, height: 110 }}
           aria-label="Islas Canarias"
         >
-          <div ref={insetContainerRef} className="absolute inset-0" style={{ background: "#f8fafc" }} />
+          <div
+            ref={insetContainerRef}
+            className="absolute inset-0"
+            style={{ background: "#f8fafc" }}
+          />
           <div className="pointer-events-none absolute top-1 left-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 px-1 rounded">
             Canarias
           </div>
@@ -417,7 +425,8 @@ export function MunicipalitiesChoroplethMap({
 }
 
 function escapeHtml(s: string) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 }

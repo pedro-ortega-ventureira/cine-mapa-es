@@ -28,7 +28,6 @@ export function getSupabasePublicConfig(
     projectId: processValue("SUPABASE_PROJECT_ID"),
   },
 ): SupabasePublicConfig {
-
   return {
     url: buildConfig.url || runtimeConfig?.url || serverConfig.url || "",
     publishableKey:

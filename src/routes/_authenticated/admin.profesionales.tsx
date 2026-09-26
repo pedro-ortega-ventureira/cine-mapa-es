@@ -17,15 +17,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, MapPin, ShieldCheck, Film, Link2, Unlink } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  MapPin,
+  ShieldCheck,
+  Film,
+  Link2,
+  Unlink,
+} from "lucide-react";
 import { PRIMARY_ROLES, PRODUCTION_TYPES, slugify } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/admin/profesionales")({
   component: AdminPros,
 });
-
 
 function AdminPros() {
   const qc = useQueryClient();
@@ -168,7 +184,6 @@ function AdminPros() {
         </div>
       </div>
 
-
       <Input
         placeholder="Buscar por nombre…"
         value={search}
@@ -228,7 +243,8 @@ function AdminPros() {
             {profsQ.isError && (
               <tr>
                 <td colSpan={6} className="p-8 text-center text-destructive text-sm">
-                  Error cargando profesionales: {profsQ.error instanceof Error ? profsQ.error.message : "desconocido"}
+                  Error cargando profesionales:{" "}
+                  {profsQ.error instanceof Error ? profsQ.error.message : "desconocido"}
                 </td>
               </tr>
             )}
@@ -254,7 +270,8 @@ function EditDialog({ value, onDone }: { value: any; onDone: () => void }) {
   async function save() {
     setSaving(true);
     try {
-      const slug = form.slug || `${slugify(form.full_name)}-${Math.random().toString(36).slice(2, 6)}`;
+      const slug =
+        form.slug || `${slugify(form.full_name)}-${Math.random().toString(36).slice(2, 6)}`;
       await upsertFn({ data: { ...form, slug } });
       toast.success("Guardado");
       onDone();
@@ -274,11 +291,17 @@ function EditDialog({ value, onDone }: { value: any; onDone: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Nombre completo *</Label>
-            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Input
+              value={form.full_name}
+              onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+            />
           </div>
           <div>
             <Label>Alias</Label>
-            <Input value={form.alias ?? ""} onChange={(e) => setForm({ ...form, alias: e.target.value })} />
+            <Input
+              value={form.alias ?? ""}
+              onChange={(e) => setForm({ ...form, alias: e.target.value })}
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -299,7 +322,10 @@ function EditDialog({ value, onDone }: { value: any; onDone: () => void }) {
           </div>
           <div>
             <Label>Email</Label>
-            <Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input
+              value={form.email ?? ""}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -321,11 +347,18 @@ function EditDialog({ value, onDone }: { value: any; onDone: () => void }) {
         </div>
         <div>
           <Label>Foto (URL)</Label>
-          <Input value={form.photo_url ?? ""} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} />
+          <Input
+            value={form.photo_url ?? ""}
+            onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+          />
         </div>
         <div>
           <Label>Biografía</Label>
-          <Textarea rows={4} value={form.bio ?? ""} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+          <Textarea
+            rows={4}
+            value={form.bio ?? ""}
+            onChange={(e) => setForm({ ...form, bio: e.target.value })}
+          />
         </div>
         <div>
           <Label>Tipos de producción</Label>
@@ -370,7 +403,9 @@ function EditDialog({ value, onDone }: { value: any; onDone: () => void }) {
         )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onDone}>Cancelar</Button>
+          <Button variant="outline" onClick={onDone}>
+            Cancelar
+          </Button>
           <Button onClick={save} disabled={saving || !form.full_name}>
             {saving ? "Guardando…" : "Guardar"}
           </Button>
@@ -460,7 +495,13 @@ function TmdbLinkSection({
           <Button type="button" size="sm" disabled={busy} onClick={importFilmography}>
             {busy ? "Importando…" : "Importar / actualizar filmografía"}
           </Button>
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => link(null)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => link(null)}
+          >
             <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
           </Button>
         </div>
@@ -508,7 +549,13 @@ function TmdbLinkSection({
                         .join(", ")}
                     </p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => link(r.id)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => link(r.id)}
+                  >
                     <Link2 className="h-3.5 w-3.5 mr-1" /> Vincular
                   </Button>
                 </li>
@@ -516,7 +563,8 @@ function TmdbLinkSection({
             </ul>
           )}
           <p className="text-[11px] text-muted-foreground">
-            Comprueba bien la foto y los títulos antes de vincular — hay mucha gente con el mismo nombre en TMDB.
+            Comprueba bien la foto y los títulos antes de vincular — hay mucha gente con el mismo
+            nombre en TMDB.
           </p>
         </>
       )}

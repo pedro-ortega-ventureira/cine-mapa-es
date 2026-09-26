@@ -15,10 +15,7 @@ import {
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
-import {
-  PASSWORD_RECOVERY_REDIRECT_URL,
-  SIGNUP_CONFIRM_REDIRECT_URL,
-} from "@/lib/auth-redirects";
+import { PASSWORD_RECOVERY_REDIRECT_URL, SIGNUP_CONFIRM_REDIRECT_URL } from "@/lib/auth-redirects";
 
 import { validateAuthSearch } from "@/lib/auth-search";
 
@@ -52,7 +49,6 @@ function AuthPage() {
   const [signupPending, setSignupPending] = useState(false);
   const [accountConfirmed, setAccountConfirmed] = useState(false);
 
-
   useEffect(() => {
     if (recovery) setRecoveryMode(true);
     if (INITIAL_AUTH_LINK_TYPE === "signup") {
@@ -69,7 +65,6 @@ function AuthPage() {
     });
     return () => sub.subscription.unsubscribe();
   }, [recovery]);
-
 
   async function handleForgotPassword() {
     if (!isValidEmail(email)) {
@@ -145,7 +140,6 @@ function AuthPage() {
     }
   }
 
-
   if (recoveryMode) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
@@ -210,7 +204,6 @@ function AuthPage() {
       )}
 
       {signupPending && (
-
         <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
           <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
           <p className="text-muted-foreground mt-1">
@@ -218,7 +211,6 @@ function AuthPage() {
           </p>
         </div>
       )}
-
 
       <form onSubmit={handleSubmit} className="space-y-3 border rounded-lg p-6 bg-card">
         <div>

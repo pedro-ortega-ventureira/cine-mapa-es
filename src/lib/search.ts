@@ -11,11 +11,34 @@ export function normalize(s: string): string {
 }
 
 const STOPWORDS = new Set([
-  "de", "la", "el", "los", "las", "y", "o", "u", "en", "del", "al", "un", "una",
-  "unos", "unas", "por", "para", "con", "sin", "que",
+  "de",
+  "la",
+  "el",
+  "los",
+  "las",
+  "y",
+  "o",
+  "u",
+  "en",
+  "del",
+  "al",
+  "un",
+  "una",
+  "unos",
+  "unas",
+  "por",
+  "para",
+  "con",
+  "sin",
+  "que",
 ]);
 
-export type MunRow = { code: string; name: string; province: string; autonomous_community?: string | null };
+export type MunRow = {
+  code: string;
+  name: string;
+  province: string;
+  autonomous_community?: string | null;
+};
 
 export type MunIndex = {
   provinceToCodes: Map<string, string[]>;

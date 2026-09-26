@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-
 export const seedMunicipalities = createServerFn({ method: "POST" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const supabase = supabaseAdmin;
@@ -10,7 +9,6 @@ export const seedMunicipalities = createServerFn({ method: "POST" }).handler(asy
     .select("*", { count: "exact", head: true });
   if ((count ?? 0) > 5000) return { alreadySeeded: true, count };
 
-
   const res = await fetch(
     "https://gist.githubusercontent.com/soft2help/6f5fd0a2cb6d02da3e87fb61edcc4353/raw/localidades.csv",
   );
@@ -18,8 +16,12 @@ export const seedMunicipalities = createServerFn({ method: "POST" }).handler(asy
   const csv = await res.text();
 
   const slugify = (s: string) =>
-    s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+    s
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
 
   const seen = new Set<string>();
   const rows: any[] = [];
@@ -32,7 +34,9 @@ export const seedMunicipalities = createServerFn({ method: "POST" }).handler(asy
     if (seen.has(code)) code = `${code}-${seen.size}`;
     seen.add(code);
     rows.push({
-      code, name: name.trim(), province: provClean,
+      code,
+      name: name.trim(),
+      province: provClean,
       autonomous_community: ccaa.trim(),
       population: parseInt(pop) || 0,
       lat: parseFloat(lat) || null,
@@ -52,4 +56,3 @@ export const seedMunicipalities = createServerFn({ method: "POST" }).handler(asy
 
   return { inserted, total: rows.length };
 });
-

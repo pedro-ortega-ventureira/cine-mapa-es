@@ -36,13 +36,14 @@ function Home() {
       // (ver src/lib/fetch-all.ts). Hoy son 71 municipios con fichas, así que
       // no truncaba todavía; al pasar de mil habría dejado de pintar el mapa
       // entero sin dar ningún error.
-      const data = await fetchAllRows<OverlayRow>((from, to) =>
-        supabase
-          .from("municipality_stats" as any)
-          .select("code,professionals_count,verified_count")
-          .gt("professionals_count", 0)
-          .order("code")
-          .range(from, to) as any,
+      const data = await fetchAllRows<OverlayRow>(
+        (from, to) =>
+          supabase
+            .from("municipality_stats" as any)
+            .select("code,professionals_count,verified_count")
+            .gt("professionals_count", 0)
+            .order("code")
+            .range(from, to) as any,
       );
       return (data as unknown as OverlayRow[]).map((r) => ({
         code: r.code,
@@ -61,8 +62,14 @@ function Home() {
       // Postgres deniega el permiso y el contador se queda a 0. Pedimos un
       // único campo que sí está permitido.
       const [pros, muni] = await Promise.all([
-        supabase.from("professionals").select("id", { count: "exact", head: true }).eq("verified", true),
-        supabase.from("municipalities").select("code", { count: "exact", head: true }).lt("population", 20000),
+        supabase
+          .from("professionals")
+          .select("id", { count: "exact", head: true })
+          .eq("verified", true),
+        supabase
+          .from("municipalities")
+          .select("code", { count: "exact", head: true })
+          .lt("population", 20000),
       ]);
       if (pros.error) throw pros.error;
       if (muni.error) throw muni.error;
@@ -86,24 +93,25 @@ function Home() {
   const mapProsQ = useQuery({
     queryKey: ["verified-pros-map"],
     queryFn: async () => {
-      return await fetchAllRows<any>((from, to) =>
-        supabase
-          .from("professionals")
-          .select("id,slug,full_name,primary_role,postal_code:raw_postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province")
-          .eq("verified", true)
-          .eq("geo_accuracy", "exact")
-          .not("geo_lat", "is", null)
-          .not("geo_lng", "is", null)
-          .order("id")
-          .range(from, to) as any,
+      return await fetchAllRows<any>(
+        (from, to) =>
+          supabase
+            .from("professionals")
+            .select(
+              "id,slug,full_name,primary_role,postal_code:raw_postal_code,geo_lat,geo_lng,geo_municipality_name,geo_province",
+            )
+            .eq("verified", true)
+            .eq("geo_accuracy", "exact")
+            .not("geo_lat", "is", null)
+            .not("geo_lng", "is", null)
+            .order("id")
+            .range(from, to) as any,
       );
     },
   });
 
   const overlays = overlaysQ.data ?? [];
   const mapPros = mapProsQ.data ?? [];
-
-
 
   return (
     <div>
@@ -117,8 +125,8 @@ function Home() {
               Directorio audiovisual rural
             </h1>
             <p className="mt-3 text-lg text-muted-foreground">
-              Un mapa vivo de directoras, directores de fotografía, guionistas, técnicas y
-              artistas que trabajan desde pueblos de toda España.
+              Un mapa vivo de directoras, directores de fotografía, guionistas, técnicas y artistas
+              que trabajan desde pueblos de toda España.
             </p>
 
             <form
@@ -156,7 +164,9 @@ function Home() {
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span className="font-semibold">{statsQ.data?.municipalities ?? "—"}</span>
-                <span className="text-muted-foreground">municipios menores de 20.000 habitantes</span>
+                <span className="text-muted-foreground">
+                  municipios menores de 20.000 habitantes
+                </span>
               </div>
               <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2">
                 <Film className="h-4 w-4 text-primary" />
@@ -179,7 +189,6 @@ function Home() {
             />
             Ocultar municipios sin profesionales
           </label>
-
         </div>
         {!mounted ? (
           <div className="rounded-lg bg-muted animate-pulse" style={{ height: 480 }} />
@@ -198,9 +207,9 @@ function Home() {
           </Suspense>
         )}
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Los puntos de color indican profesionales verificados según su código postal. Los círculos oscuros con número agrupan varios profesionales que comparten el mismo CP.
+          Los puntos de color indican profesionales verificados según su código postal. Los círculos
+          oscuros con número agrupan varios profesionales que comparten el mismo CP.
         </p>
-
       </section>
 
       {latestQ.data && latestQ.data.length > 0 && (
@@ -233,7 +242,10 @@ function Home() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-tight truncate">{p.full_name}</p>
                       {p.primary_role && (
-                        <p className="text-xs truncate" style={{ color: colorForRole(p.primary_role) }}>
+                        <p
+                          className="text-xs truncate"
+                          style={{ color: colorForRole(p.primary_role) }}
+                        >
                           {p.primary_role}
                         </p>
                       )}

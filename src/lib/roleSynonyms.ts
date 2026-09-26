@@ -42,8 +42,8 @@ export const ROLE_SYNONYMS: Record<string, string[]> = {
     "operadora",
     "operador de camara",
   ],
-  "Guion": ["guion", "guionista", "guionistas", "guiones", "escritor", "escritora", "escritura"],
-  "Producción": [
+  Guion: ["guion", "guionista", "guionistas", "guiones", "escritor", "escritora", "escritura"],
+  Producción: [
     "produccion",
     "productor",
     "productora",
@@ -53,16 +53,8 @@ export const ROLE_SYNONYMS: Record<string, string[]> = {
     "jefe de produccion",
     "jefa de produccion",
   ],
-  "Montaje / Edición": [
-    "montaje",
-    "montador",
-    "montadora",
-    "edicion",
-    "editor",
-    "editora",
-    "edit",
-  ],
-  "Sonido": [
+  "Montaje / Edición": ["montaje", "montador", "montadora", "edicion", "editor", "editora", "edit"],
+  Sonido: [
     "sonido",
     "sonidista",
     "sonidistas",

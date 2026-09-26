@@ -45,8 +45,8 @@ function AuthLayout() {
         </div>
         <h1 className="text-xl font-semibold">Acceso restringido</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          Tu cuenta ha iniciado sesión correctamente, pero no tiene permisos de administrador
-          para ver esta sección.
+          Tu cuenta ha iniciado sesión correctamente, pero no tiene permisos de administrador para
+          ver esta sección.
         </p>
         <div className="flex justify-center gap-2 mt-6">
           <Button variant="outline" onClick={() => navigate({ to: "/" })}>
@@ -60,7 +60,12 @@ function AuthLayout() {
     );
   }
 
-  const nav: Array<{ to: "/admin" | "/admin/profesionales" | "/admin/importar" | "/admin/municipios"; label: string; icon: any; exact?: boolean }> = [
+  const nav: Array<{
+    to: "/admin" | "/admin/profesionales" | "/admin/importar" | "/admin/municipios";
+    label: string;
+    icon: any;
+    exact?: boolean;
+  }> = [
     { to: "/admin", label: "Dashboard", icon: Home, exact: true },
     { to: "/admin/profesionales", label: "Profesionales", icon: Users },
     { to: "/admin/importar", label: "Importar Excel", icon: Upload },
@@ -79,7 +84,9 @@ function AuthLayout() {
                 key={n.to}
                 to={n.to}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                  active ? "bg-secondary font-medium" : "text-muted-foreground hover:bg-secondary/50"
+                  active
+                    ? "bg-secondary font-medium"
+                    : "text-muted-foreground hover:bg-secondary/50"
                 }`}
               >
                 <Icon className="h-4 w-4" /> {n.label}

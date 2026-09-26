@@ -8,7 +8,15 @@ export const Route = createFileRoute("/_authenticated/admin/")({
   component: Dashboard,
 });
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: any;
+}) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between">
@@ -25,7 +33,10 @@ function Dashboard() {
   const isAdminQ = useQuery({
     queryKey: ["has-role-admin", ctx.user?.id],
     queryFn: async () => {
-      const { data } = await supabase.rpc("has_role", { _user_id: ctx.user!.id, _role: "admin" } as any);
+      const { data } = await supabase.rpc("has_role", {
+        _user_id: ctx.user!.id,
+        _role: "admin",
+      } as any);
       return !!data;
     },
     enabled: !!ctx.user?.id,
@@ -39,7 +50,10 @@ function Dashboard() {
       // pedir "*" falla en silencio dejando los contadores a 0.
       const [total, verified, muniCount] = await Promise.all([
         supabase.from("professionals").select("id", { count: "exact", head: true }),
-        supabase.from("professionals").select("id", { count: "exact", head: true }).eq("verified", true),
+        supabase
+          .from("professionals")
+          .select("id", { count: "exact", head: true })
+          .eq("verified", true),
         supabase.from("municipalities").select("code", { count: "exact", head: true }),
       ]);
       if (total.error) throw total.error;
@@ -80,7 +94,7 @@ function Dashboard() {
             Ejecuta esta consulta SQL una sola vez (desde la consola de la base de datos):
           </p>
           <pre className="bg-background border rounded p-2 text-xs overflow-x-auto">
-{`INSERT INTO public.user_roles (user_id, role)
+            {`INSERT INTO public.user_roles (user_id, role)
 VALUES ('${ctx.user?.id}', 'admin');`}
           </pre>
         </div>

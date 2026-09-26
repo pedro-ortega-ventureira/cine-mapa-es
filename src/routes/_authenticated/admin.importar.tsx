@@ -28,7 +28,13 @@ function autoDetect(header: string): string {
   if (h.includes("nombre") || h.includes("apellido")) return "full_name";
   if (h.includes("email") || h.includes("correo") || h.includes("@")) return "email";
   if (h.includes("postal") || h.includes("cp")) return "raw_postal_code";
-  if (h.includes("actividad") || h.includes("rol") || h.includes("especialidad") || h.includes("profesion")) return "primary_role";
+  if (
+    h.includes("actividad") ||
+    h.includes("rol") ||
+    h.includes("especialidad") ||
+    h.includes("profesion")
+  )
+    return "primary_role";
   if (h.includes("bio") || h.includes("presenta")) return "bio";
   return "";
 }
@@ -68,18 +74,24 @@ function ImportPage() {
   async function runImport() {
     setImporting(true);
     try {
-      const mapped = rows.map((row) => {
-        const out: any = {};
-        for (const [col, field] of Object.entries(mapping)) {
-          if (!field) continue;
-          let val = row[col];
-          if (val == null || val === "") continue;
-          val = String(val).trim();
-          if (field === "secondary_roles") out[field] = val.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean);
-          else out[field] = val;
-        }
-        return out;
-      }).filter((r: any) => r.full_name);
+      const mapped = rows
+        .map((row) => {
+          const out: any = {};
+          for (const [col, field] of Object.entries(mapping)) {
+            if (!field) continue;
+            let val = row[col];
+            if (val == null || val === "") continue;
+            val = String(val).trim();
+            if (field === "secondary_roles")
+              out[field] = val
+                .split(/[,;]/)
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+            else out[field] = val;
+          }
+          return out;
+        })
+        .filter((r: any) => r.full_name);
 
       const res = await importFn({ data: { filename, rows: mapped } });
       setResult(res);
@@ -95,7 +107,8 @@ function ImportPage() {
     <div>
       <h1 className="text-2xl font-semibold mb-1">Importar desde Excel</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Sube un fichero .xlsx, mapea las columnas y confirma. Los registros con el mismo email se actualizan.
+        Sube un fichero .xlsx, mapea las columnas y confirma. Los registros con el mismo email se
+        actualizan.
       </p>
 
       {rows.length === 0 ? (
@@ -141,7 +154,9 @@ function ImportPage() {
             <div className="grid gap-2">
               {headers.map((h) => (
                 <div key={h} className="grid grid-cols-2 gap-2 items-center text-sm">
-                  <div className="truncate text-muted-foreground text-xs" title={h}>{h}</div>
+                  <div className="truncate text-muted-foreground text-xs" title={h}>
+                    {h}
+                  </div>
                   <select
                     value={mapping[h] ?? ""}
                     onChange={(e) => setMapping({ ...mapping, [h]: e.target.value })}
@@ -159,16 +174,19 @@ function ImportPage() {
           </div>
 
           <div className="rounded-lg border overflow-x-auto">
-            <p className="p-3 text-xs font-medium bg-secondary/30">Vista previa (primeras 10 filas)</p>
+            <p className="p-3 text-xs font-medium bg-secondary/30">
+              Vista previa (primeras 10 filas)
+            </p>
             <table className="w-full text-xs">
               <thead className="bg-secondary/20">
                 <tr>
                   {headers.map((h) => (
-                    <th key={h} className="p-2 text-left font-normal text-muted-foreground truncate max-w-[200px]">
+                    <th
+                      key={h}
+                      className="p-2 text-left font-normal text-muted-foreground truncate max-w-[200px]"
+                    >
                       {h}
-                      {mapping[h] && (
-                        <span className="ml-1 text-primary">→ {mapping[h]}</span>
-                      )}
+                      {mapping[h] && <span className="ml-1 text-primary">→ {mapping[h]}</span>}
                     </th>
                   ))}
                 </tr>

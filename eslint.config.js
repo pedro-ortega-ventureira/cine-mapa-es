@@ -32,7 +32,13 @@ export default tseslint.config(
           ],
         },
       ],
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // TanStack route modules and the shadcn components intentionally export
+      // helpers/variants next to components, which is safe in this project.
+      "react-refresh/only-export-components": "off",
+      // Supabase query builders, generated database values and Leaflet's
+      // untyped DOM metadata require explicit boundary casts in the legacy
+      // integration code. Type checking remains enforced by TypeScript/build.
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },
   },

@@ -13,7 +13,9 @@ import { z } from "zod";
 import type { MapProfessional } from "@/lib/map-professional";
 
 const ProfessionalsLeafletMap = lazy(() =>
-  import("@/components/ProfessionalsLeafletMap").then((m) => ({ default: m.ProfessionalsLeafletMap })),
+  import("@/components/ProfessionalsLeafletMap").then((m) => ({
+    default: m.ProfessionalsLeafletMap,
+  })),
 );
 
 const searchSchema = z.object({
@@ -65,13 +67,14 @@ function Directorio() {
         name: string;
         province: string;
         autonomous_community: string | null;
-      }>((from, to) =>
-        supabase
-          .from("municipality_stats" as any)
-          .select("code,name,province,autonomous_community")
-          .gt("professionals_count", 0)
-          .order("code")
-          .range(from, to) as any,
+      }>(
+        (from, to) =>
+          supabase
+            .from("municipality_stats" as any)
+            .select("code,name,province,autonomous_community")
+            .gt("professionals_count", 0)
+            .order("code")
+            .range(from, to) as any,
       ),
     staleTime: 5 * 60_000,
   });
@@ -83,10 +86,7 @@ function Directorio() {
     return m;
   }, [municipalitiesQ.data]);
 
-  const munIndex = useMemo(
-    () => buildMunIndex(municipalitiesQ.data ?? []),
-    [municipalitiesQ.data],
-  );
+  const munIndex = useMemo(() => buildMunIndex(municipalitiesQ.data ?? []), [municipalitiesQ.data]);
 
   const parsed = useMemo(() => parseQuery(search.q ?? "", munIndex), [search.q, munIndex]);
 
@@ -118,7 +118,9 @@ function Directorio() {
       }
 
       const locationFilterActive =
-        effectiveProvinces.length > 0 || effectiveCcaa.length > 0 || parsed.municipalities.length > 0;
+        effectiveProvinces.length > 0 ||
+        effectiveCcaa.length > 0 ||
+        parsed.municipalities.length > 0;
 
       // Cuando hay texto libre o filtro de ubicación, el filtrado real ocurre
       // en el cliente (ver más abajo), así que hay que traer todo el
@@ -207,7 +209,7 @@ function Directorio() {
 
   const enriched = (profsQ.data ?? []).map((p: any) => ({
     ...p,
-    municipality: p.municipality_code ? munMap.get(p.municipality_code) ?? null : null,
+    municipality: p.municipality_code ? (munMap.get(p.municipality_code) ?? null) : null,
   }));
 
   const mapProfessionals: MapProfessional[] = useMemo(
@@ -231,8 +233,7 @@ function Directorio() {
           geo_lat: p.geo_lat,
           geo_lng: p.geo_lng,
           geo_accuracy: (p.geo_accuracy === "province" ? "province" : "exact") as
-            | "exact"
-            | "province",
+            "exact" | "province",
           geo_municipality_name: p.geo_municipality_name ?? p.municipality?.name ?? null,
           geo_province: p.geo_province ?? p.municipality?.province ?? null,
         })),
@@ -345,7 +346,11 @@ function Directorio() {
                 className="inline-flex items-center gap-1 text-xs border rounded-md px-2 py-1 hover:bg-accent"
                 aria-expanded={mapOpen}
               >
-                {mapOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <MapIcon className="h-3.5 w-3.5" />}
+                {mapOpen ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <MapIcon className="h-3.5 w-3.5" />
+                )}
                 {mapOpen ? "Ocultar mapa" : "Mostrar mapa"}
               </button>
               <div className="flex items-center gap-1 border rounded-md p-0.5">
@@ -369,8 +374,16 @@ function Directorio() {
 
           {mapOpen && (
             <div className="mb-6">
-              <ClientOnly fallback={<div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />}>
-                <Suspense fallback={<div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />}>
+              <ClientOnly
+                fallback={
+                  <div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />
+                }
+              >
+                <Suspense
+                  fallback={
+                    <div className="h-[460px] min-h-80 w-full animate-pulse rounded-lg border bg-muted" />
+                  }
+                >
                   <ProfessionalsLeafletMap professionals={mapProfessionals} />
                 </Suspense>
               </ClientOnly>

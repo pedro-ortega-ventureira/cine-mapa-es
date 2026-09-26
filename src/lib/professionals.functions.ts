@@ -63,7 +63,11 @@ export const listProfessionalsAdmin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const db = await getAdminClient();
-    let q = db.from("professionals").select("*").order("date_joined", { ascending: false }).limit(200);
+    let q = db
+      .from("professionals")
+      .select("*")
+      .order("date_joined", { ascending: false })
+      .limit(200);
     if (data.search) q = q.ilike("full_name", `%${data.search}%`);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -123,18 +127,27 @@ const importRowSchema = z.object({
 export const importProfessionals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      filename: z.string().optional(),
-      rows: z.array(importRowSchema),
-    }).parse(d),
+    z
+      .object({
+        filename: z.string().optional(),
+        rows: z.array(importRowSchema),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const db = await getAdminClient();
     const slugify = (s: string) =>
-      s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+      s
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
 
-    let inserted = 0, updated = 0, error_count = 0;
+    let inserted = 0,
+      updated = 0,
+      error_count = 0;
     const errors: Array<{ row: number; message: string }> = [];
 
     for (let i = 0; i < data.rows.length; i++) {
@@ -181,16 +194,11 @@ export const importProfessionals = createServerFn({ method: "POST" })
         };
 
         if (existing) {
-          const { error } = await db
-            .from("professionals")
-            .update(payload)
-            .eq("id", existing.id);
+          const { error } = await db.from("professionals").update(payload).eq("id", existing.id);
           if (error) throw error;
           updated++;
         } else {
-          const { error } = await db
-            .from("professionals")
-            .insert({ ...payload, slug });
+          const { error } = await db.from("professionals").insert({ ...payload, slug });
           if (error) throw error;
           inserted++;
         }
@@ -215,22 +223,24 @@ export const importProfessionals = createServerFn({ method: "POST" })
 export const upsertFilmography = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().uuid().optional(),
-      professional_id: z.string().uuid(),
-      tmdb_id: z.number().int().nullable().optional(),
-      title: z.string().min(1),
-      original_title: z.string().nullable().optional(),
-      type: z.enum(["movie", "tv", "short", "other"]),
-      year: z.number().int().nullable().optional(),
-      role_in_production: z.string().nullable().optional(),
-      credit_type: z.string().nullable().optional(),
-      poster_url: z.string().nullable().optional(),
-      synopsis: z.string().nullable().optional(),
-      tmdb_rating: z.number().nullable().optional(),
-      custom_note: z.string().nullable().optional(),
-      featured: z.boolean().optional(),
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        professional_id: z.string().uuid(),
+        tmdb_id: z.number().int().nullable().optional(),
+        title: z.string().min(1),
+        original_title: z.string().nullable().optional(),
+        type: z.enum(["movie", "tv", "short", "other"]),
+        year: z.number().int().nullable().optional(),
+        role_in_production: z.string().nullable().optional(),
+        credit_type: z.string().nullable().optional(),
+        poster_url: z.string().nullable().optional(),
+        synopsis: z.string().nullable().optional(),
+        tmdb_rating: z.number().nullable().optional(),
+        custom_note: z.string().nullable().optional(),
+        featured: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -265,7 +275,11 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
     // El cliente de service_role también pasa por PostgREST, así que también
     // se come el tope de 1.000 filas: `.limit(2000)` habría dejado fichas sin
     // procesar en silencio y el recuento del informe habría mentido.
-    const pending = await fetchAllRows<{ id: string; raw_postal_code: string | null; tags: string[] | null }>(
+    const pending = await fetchAllRows<{
+      id: string;
+      raw_postal_code: string | null;
+      tags: string[] | null;
+    }>(
       (from, to) =>
         db
           .from("professionals")
@@ -276,10 +290,15 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
           .range(from, to) as any,
     );
 
-    let resolved = 0, ambiguous = 0, missing = 0;
+    let resolved = 0,
+      ambiguous = 0,
+      missing = 0;
     for (const p of pending ?? []) {
       const cp = String((p as any).raw_postal_code || "").padStart(5, "0");
-      if (!/^\d{5}$/.test(cp)) { missing++; continue; }
+      if (!/^\d{5}$/.test(cp)) {
+        missing++;
+        continue;
+      }
       const { data: matches } = await db
         .from("municipalities")
         .select("code")
@@ -291,7 +310,10 @@ export const backfillMunicipalities = createServerFn({ method: "POST" })
       }
       if (matches.length > 1) {
         const tags = Array.from(new Set([...(((p as any).tags as string[]) ?? []), "revisar-cp"]));
-        await db.from("professionals").update({ tags }).eq("id", (p as any).id);
+        await db
+          .from("professionals")
+          .update({ tags })
+          .eq("id", (p as any).id);
         ambiguous++;
         continue;
       }
@@ -318,4 +340,3 @@ export const bulkVerifyAll = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { verified: data?.length ?? 0 };
   });
-

@@ -8,19 +8,19 @@ import type { MapProfessional } from "@/lib/map-professional";
 const iconCache = new Map<string, L.DivIcon>();
 
 export const ROLE_COLORS: Record<string, string> = {
-  "Dirección": "#ef4444",
-  "Guion": "#f97316",
-  "Producción": "#eab308",
+  Dirección: "#ef4444",
+  Guion: "#f97316",
+  Producción: "#eab308",
   "Dirección de fotografía": "#84cc16",
-  "Cámara": "#22c55e",
-  "Sonido": "#06b6d4",
-  "Montaje": "#3b82f6",
-  "Arte": "#8b5cf6",
-  "Vestuario": "#ec4899",
-  "Maquillaje": "#f43f5e",
-  "Interpretación": "#14b8a6",
-  "VFX": "#a855f7",
-  "Postproducción": "#6366f1",
+  Cámara: "#22c55e",
+  Sonido: "#06b6d4",
+  Montaje: "#3b82f6",
+  Arte: "#8b5cf6",
+  Vestuario: "#ec4899",
+  Maquillaje: "#f43f5e",
+  Interpretación: "#14b8a6",
+  VFX: "#a855f7",
+  Postproducción: "#6366f1",
 };
 const ROLE_DEFAULT = "#64748b";
 
@@ -82,7 +82,8 @@ function popupHtml(p: MapProfessional) {
   const verified = p.verified
     ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:#dcfce7;color:#166534;font-size:11px;margin-left:4px">verificado</span>`
     : "";
-  const approx = p.geo_accuracy === "province" ? ` <span style="color:#a16207">(aprox.)</span>` : "";
+  const approx =
+    p.geo_accuracy === "province" ? ` <span style="color:#a16207">(aprox.)</span>` : "";
   const loc = [p.geo_municipality_name, p.geo_province].filter(Boolean).join(" / ") || "—";
   return `
     <div style="min-width:220px;font-family:system-ui,sans-serif;line-height:1.35">
@@ -103,10 +104,16 @@ function popupHtml(p: MapProfessional) {
 }
 
 function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }
 function escapeAttr(s: string) {
-  return s.replace(/["'<>&]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  return s.replace(
+    /["'<>&]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }
 
 // -------- Municipios GeoJSON --------
@@ -146,6 +153,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
     if (!mainContainerRef.current || mainMapRef.current) return;
     // Ensure Leaflet can reinitialize after strict-mode remounts / error resets
     const container = mainContainerRef.current;
+    const insetContainer = insetContainerRef.current;
     container.innerHTML = "";
     (container as any)._leaflet_id = null;
 
@@ -159,8 +167,13 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
     });
     main.fitBounds(PENINSULA_BOUNDS, { animate: false, padding: [10, 10] });
 
-    const mainCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-      .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 55 });
+    const mainCluster = (
+      L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup }
+    ).markerClusterGroup({
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      maxClusterRadius: 55,
+    });
     main.addLayer(mainCluster);
     mainMapRef.current = main;
     mainClusterRef.current = mainCluster;
@@ -183,8 +196,13 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
         maxZoom: 12,
       });
       inset.fitBounds(CANARIAS_BOUNDS, { animate: false, padding: [4, 4] });
-      const insetCluster = (L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup })
-        .markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 40 });
+      const insetCluster = (
+        L as unknown as { markerClusterGroup: (o?: unknown) => L.MarkerClusterGroup }
+      ).markerClusterGroup({
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        maxClusterRadius: 40,
+      });
       inset.addLayer(insetCluster);
       insetMapRef.current = inset;
       insetClusterRef.current = insetCluster;
@@ -211,10 +229,14 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
         };
       };
       if (mainMapRef.current) {
-        L.geoJSON(peninsula, { interactive: false, style: styleFn }).addTo(mainMapRef.current).bringToBack();
+        L.geoJSON(peninsula, { interactive: false, style: styleFn })
+          .addTo(mainMapRef.current)
+          .bringToBack();
       }
       if (insetMapRef.current) {
-        L.geoJSON(canarias, { interactive: false, style: styleFn }).addTo(insetMapRef.current).bringToBack();
+        L.geoJSON(canarias, { interactive: false, style: styleFn })
+          .addTo(insetMapRef.current)
+          .bringToBack();
       }
     });
 
@@ -222,7 +244,7 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       main.invalidateSize();
       insetMapRef.current?.invalidateSize();
     });
-    ro.observe(mainContainerRef.current);
+    ro.observe(container);
 
     return () => {
       ro.disconnect();
@@ -233,17 +255,14 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
       mainClusterRef.current = null;
       insetClusterRef.current = null;
       // Clear container ids so strict-mode remounts can reinitialize Leaflet
-      if (mainContainerRef.current) {
-        mainContainerRef.current.innerHTML = "";
-        (mainContainerRef.current as any)._leaflet_id = null;
-      }
-      if (insetContainerRef.current) {
-        insetContainerRef.current.innerHTML = "";
-        (insetContainerRef.current as any)._leaflet_id = null;
+      container.innerHTML = "";
+      (container as any)._leaflet_id = null;
+      if (insetContainer) {
+        insetContainer.innerHTML = "";
+        (insetContainer as any)._leaflet_id = null;
       }
     };
   }, []);
-
 
   const key = useMemo(() => professionals.map((p) => p.id).join("|"), [professionals]);
   useEffect(() => {
@@ -281,7 +300,11 @@ export function ProfessionalsLeafletMap({ professionals }: Props) {
         style={{ width: 200, height: 120 }}
         aria-label="Islas Canarias"
       >
-        <div ref={insetContainerRef} className="absolute inset-0" style={{ background: "#f8fafc" }} />
+        <div
+          ref={insetContainerRef}
+          className="absolute inset-0"
+          style={{ background: "#f8fafc" }}
+        />
         <div className="pointer-events-none absolute top-1 left-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 px-1 rounded z-[500]">
           Canarias
         </div>

@@ -86,12 +86,30 @@ export function SiteHeader() {
           </a>
         </nav>
         <div className="ml-auto flex items-center gap-2 sm:ml-0">
-          <Link
-            to="/registro"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <UserRound className="h-4 w-4" /> Mi ficha
-          </Link>
+          {!session ? (
+            <>
+              <Link
+                to="/registro"
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <UserRound className="h-4 w-4" /> Alta
+              </Link>
+              <Link
+                to="/registro"
+                search={{ mode: "signin" }}
+                className="inline-flex rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                Acceder
+              </Link>
+            </>
+          ) : (
+            <Link
+              to="/registro"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <UserRound className="h-4 w-4" /> Mi ficha
+            </Link>
+          )}
           {!!session && (
             <button
               type="button"

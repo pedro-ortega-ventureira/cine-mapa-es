@@ -35,7 +35,12 @@ export const resolveProfessionalGeo = createServerFn({ method: "POST" })
         });
         if (!res.ok) return null;
         const json = (await res.json()) as {
-          places?: Array<{ latitude: string; longitude: string; "place name": string; state: string }>;
+          places?: Array<{
+            latitude: string;
+            longitude: string;
+            "place name": string;
+            state: string;
+          }>;
         };
         const place = json.places?.[0];
         if (!place) return null;

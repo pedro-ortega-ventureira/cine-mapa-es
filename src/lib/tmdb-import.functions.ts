@@ -164,9 +164,11 @@ export const importTmdbFilmography = createServerFn({ method: "POST" })
         original_title: original,
         type: (isMovie ? "movie" : "tv") as "movie" | "tv",
         year,
-        role_in_production: fromCrew ? credit.job ?? null : credit.character ?? null,
+        role_in_production: fromCrew ? (credit.job ?? null) : (credit.character ?? null),
         credit_type: creditTypeFor(credit, fromCrew),
-        poster_url: credit.poster_path ? `https://image.tmdb.org/t/p/w342${credit.poster_path}` : null,
+        poster_url: credit.poster_path
+          ? `https://image.tmdb.org/t/p/w342${credit.poster_path}`
+          : null,
         synopsis: credit.overview ?? null,
         tmdb_rating: credit.vote_average ?? null,
       };

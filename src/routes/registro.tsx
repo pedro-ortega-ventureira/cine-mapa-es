@@ -20,11 +20,8 @@ import {
   SIGNUP_CONFIRM_MESSAGE,
 } from "@/lib/auth-flow";
 import { INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
-import {
-  PASSWORD_RECOVERY_REDIRECT_URL,
-  SIGNUP_CONFIRM_REDIRECT_URL,
-} from "@/lib/auth-redirects";
-
+import { PASSWORD_RECOVERY_REDIRECT_URL, SIGNUP_CONFIRM_REDIRECT_URL } from "@/lib/auth-redirects";
+import { initialRegistrationAuthMode, modeAfterFailedSignIn } from "@/lib/registration-auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +34,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/registro")({
   ssr: false,
+  validateSearch: (search) => ({ mode: initialRegistrationAuthMode(search.mode) }),
   component: RegistroPage,
 });
 
@@ -149,8 +147,9 @@ function rowToForm(row: ProfessionalRow): FormState {
 }
 
 function RegistroPage() {
+  const { mode } = Route.useSearch();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">(mode);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -182,7 +181,6 @@ function RegistroPage() {
     });
     return () => sub.subscription.unsubscribe();
   }, [recoveryFromLink]);
-
 
   async function handleForgotPassword() {
     if (!isValidEmail(authEmail)) {
@@ -226,7 +224,6 @@ function RegistroPage() {
       setAuthLoading(false);
     }
   }
-
 
   const [existing, setExisting] = useState<ProfessionalRow | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
@@ -348,8 +345,10 @@ function RegistroPage() {
         setSignupPending(true);
         toast.success(action.message);
       }
-
     } catch (err) {
+      if (authMode === "signin" && err instanceof Error) {
+        setAuthMode(modeAfterFailedSignIn(err.message));
+      }
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
     } finally {
       setAuthLoading(false);
@@ -538,7 +537,6 @@ function RegistroPage() {
         )}
 
         {signupPending && (
-
           <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
             <p className="font-medium">{SIGNUP_CONFIRM_MESSAGE}</p>
             <p className="text-muted-foreground mt-1">
@@ -547,8 +545,6 @@ function RegistroPage() {
             </p>
           </div>
         )}
-
-
 
         <form onSubmit={handleAuthSubmit} className="space-y-3 border rounded-lg p-6 bg-card">
           <div>

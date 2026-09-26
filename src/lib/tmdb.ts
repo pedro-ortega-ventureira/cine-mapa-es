@@ -17,7 +17,12 @@ export type TmdbPersonResult = {
   name: string;
   profile_path?: string | null;
   known_for_department?: string;
-  known_for?: Array<{ title?: string; name?: string; release_date?: string; first_air_date?: string }>;
+  known_for?: Array<{
+    title?: string;
+    name?: string;
+    release_date?: string;
+    first_air_date?: string;
+  }>;
   popularity?: number;
 };
 
@@ -29,8 +34,8 @@ export async function tmdbSearch(query: string): Promise<TmdbSearchResult[]> {
   const r = await fetch(`/api/tmdb/search/multi?query=${encodeURIComponent(query)}`);
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error || "TMDB error");
-  return (data.results ?? []).filter((x: TmdbSearchResult) =>
-    x.media_type === "movie" || x.media_type === "tv",
+  return (data.results ?? []).filter(
+    (x: TmdbSearchResult) => x.media_type === "movie" || x.media_type === "tv",
   );
 }
 
