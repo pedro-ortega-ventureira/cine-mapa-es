@@ -9,8 +9,8 @@ import { buildMunIndex, parseQuery, normalize } from "@/lib/search";
 import { fetchAllRows } from "@/lib/fetch-all";
 import { provinceForPostalCode, PROVINCE_TO_CCAA, PROVINCE_NAMES } from "@/lib/spain-provinces";
 import { Search, Grid3x3, List, X, Map as MapIcon, ChevronUp } from "lucide-react";
-import { z } from "zod";
 import type { MapProfessional } from "@/lib/map-professional";
+import { applyHiringFilters, directorySearchSchema } from "@/lib/directory-filters";
 
 const ProfessionalsLeafletMap = lazy(() =>
   import("@/components/ProfessionalsLeafletMap").then((m) => ({
@@ -18,16 +18,8 @@ const ProfessionalsLeafletMap = lazy(() =>
   })),
 );
 
-const searchSchema = z.object({
-  q: z.string().optional(),
-  ccaa: z.string().optional(),
-  provincia: z.string().optional(),
-  rol: z.string().optional(),
-  tipo: z.string().optional(),
-});
-
 export const Route = createFileRoute("/directorio")({
-  validateSearch: (s) => searchSchema.parse(s),
+  validateSearch: (s) => directorySearchSchema.parse(s),
   head: () => ({
     meta: [
       { title: "Directorio de profesionales — Audiovisual rural" },
@@ -132,7 +124,7 @@ function Directorio() {
         .from("professionals")
         .select(
           sel(
-            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,raw_postal_code,tags,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province",
+            "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,raw_postal_code,tags,verified,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province,availability,works_remotely,willing_to_travel,travel_scope,has_own_vehicle,has_cargo_vehicle,can_drive_van",
           ),
         )
         .eq("verified", true)
@@ -147,6 +139,8 @@ function Directorio() {
       }
 
       if (search.tipo) query = query.contains("production_types", [search.tipo]);
+
+      query = applyHiringFilters(query, search);
 
       const { data, error } = await query.returns<any[]>();
       if (error) throw error;
@@ -255,7 +249,18 @@ function Directorio() {
   ];
 
   const hasAnyFilter =
-    !!search.q || !!search.ccaa || !!search.rol || !!search.tipo || !!search.provincia;
+    !!search.q ||
+    !!search.ccaa ||
+    !!search.rol ||
+    !!search.tipo ||
+    !!search.provincia ||
+    !!search.availability ||
+    search.remote !== undefined ||
+    search.willing !== undefined ||
+    !!search.travel ||
+    search.vehicle !== undefined ||
+    search.cargo !== undefined ||
+    search.van !== undefined;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -317,6 +322,59 @@ function Directorio() {
             value={search.tipo ?? ""}
             options={PRODUCTION_TYPES}
             onChange={(v) => navigate({ search: { ...search, tipo: v || undefined } })}
+          />
+          <FilterSelect
+            label="Disponibilidad"
+            value={search.availability ?? ""}
+            options={["Disponible", "Bajo consulta", "No disponible"]}
+            onChange={(v) =>
+              navigate({
+                search: {
+                  ...search,
+                  availability: (v || undefined) as typeof search.availability,
+                },
+              })
+            }
+          />
+          <LabeledFilterSelect
+            label="Ámbito de desplazamiento"
+            value={search.travel ?? ""}
+            options={[
+              { value: "local", label: "Local" },
+              { value: "provincial", label: "Provincial" },
+              { value: "national", label: "Nacional" },
+              { value: "international", label: "Internacional" },
+            ]}
+            onChange={(v) =>
+              navigate({
+                search: { ...search, travel: (v || undefined) as typeof search.travel },
+              })
+            }
+          />
+          <TriStateFilter
+            label="Trabajo en remoto"
+            value={search.remote}
+            onChange={(v) => navigate({ search: { ...search, remote: v } })}
+          />
+          <TriStateFilter
+            label="Dispuesto/a a viajar"
+            value={search.willing}
+            onChange={(v) => navigate({ search: { ...search, willing: v } })}
+          />
+          <TriStateFilter
+            label="Vehículo propio"
+            value={search.vehicle}
+            onChange={(v) => navigate({ search: { ...search, vehicle: v } })}
+          />
+          <TriStateFilter
+            label="Vehículo de carga"
+            value={search.cargo}
+            onChange={(v) => navigate({ search: { ...search, cargo: v } })}
+          />
+          <TriStateFilter
+            label="Puede conducir furgoneta"
+            value={search.van}
+            onChange={(v) => navigate({ search: { ...search, van: v } })}
           />
 
           {hasAnyFilter && (
@@ -468,5 +526,59 @@ function FilterSelect({
         ))}
       </select>
     </div>
+  );
+}
+
+function LabeledFilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+      >
+        <option value="">Todos</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function TriStateFilter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: "true" | "false" | undefined;
+  onChange: (value: "true" | "false" | undefined) => void;
+}) {
+  return (
+    <LabeledFilterSelect
+      label={label}
+      value={value ?? ""}
+      options={[
+        { value: "true", label: "Sí" },
+        { value: "false", label: "No" },
+      ]}
+      onChange={(nextValue) =>
+        onChange(nextValue === "true" || nextValue === "false" ? nextValue : undefined)
+      }
+    />
   );
 }
