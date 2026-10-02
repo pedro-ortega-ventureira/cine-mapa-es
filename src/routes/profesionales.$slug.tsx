@@ -16,48 +16,10 @@ const MunicipalityContourMap = lazy(() =>
 
 export const Route = createFileRoute("/profesionales/$slug")({
   loader: async ({ params }) => {
-    const publicCols = [
-      "id",
-      "slug",
-      "full_name",
-      "alias",
-      "photo_url",
-      "primary_role",
-      "secondary_roles",
-      "production_types",
-      "municipality_code",
-      "tags",
-      "bio",
-      "awards",
-      "education",
-      "languages",
-      "nationality",
-      "gender",
-      "birth_year",
-      "years_of_experience",
-      "availability",
-      "willing_to_travel",
-      "works_remotely",
-      "travel_scope",
-      "has_own_vehicle",
-      "has_cargo_vehicle",
-      "can_drive_van",
-      "equipment_owned",
-      "union_membership",
-      "reel_url",
-      "website",
-      "social_links",
-      "verified",
-      "date_joined",
-      "updated_at",
-      "profile_views",
-      "geo_lat",
-      "geo_lng",
-      "geo_accuracy",
-      "geo_municipality_name",
-      "geo_province",
-      "raw_postal_code",
-    ].join(",");
+    // Cadena literal única: el generador de tipos de Supabase solo infiere la
+    // respuesta cuando la lista de columnas es estática (no un join dinámico).
+    const publicCols =
+      "id,slug,full_name,alias,photo_url,primary_role,secondary_roles,production_types,municipality_code,tags,bio,awards,education,languages,nationality,gender,birth_year,years_of_experience,availability,willing_to_travel,works_remotely,travel_scope,has_own_vehicle,has_cargo_vehicle,can_drive_van,equipment_owned,union_membership,reel_url,website,social_links,verified,date_joined,updated_at,profile_views,geo_lat,geo_lng,geo_accuracy,geo_municipality_name,geo_province,raw_postal_code";
     const { data, error } = await supabase
       .from("professionals")
       .select(`${publicCols}, municipalities(*)`)
@@ -112,7 +74,9 @@ export const Route = createFileRoute("/profesionales/$slug")({
   },
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-      <p className="text-muted-foreground">{error.message}</p>
+      <p className="text-muted-foreground">
+        {error instanceof Error ? error.message : "Ha ocurrido un error inesperado."}
+      </p>
     </div>
   ),
   notFoundComponent: () => (

@@ -36,7 +36,7 @@ export const Route = createFileRoute("/municipios/$codigo")({
   ),
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-muted-foreground">
-      {error.message}
+      {error instanceof Error ? error.message : "Ha ocurrido un error inesperado."}
     </div>
   ),
   component: MunicipalityPage,
