@@ -42,7 +42,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -162,7 +162,7 @@ function RootComponent() {
     if (destination === "/auth") {
       router.navigate({ to: "/auth", search: { recovery: true }, replace: true });
     } else if (destination === "/registro") {
-      router.navigate({ to: "/registro", replace: true });
+      router.navigate({ to: "/registro", search: { mode: "signup" }, replace: true });
     }
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {

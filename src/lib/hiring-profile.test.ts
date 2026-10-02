@@ -46,7 +46,7 @@ describe("perfil orientado a contratación", () => {
     [{ title: "", year: 2025, role_in_production: "Montaje" }, "título vacío"],
     [{ title: "La senda", role_in_production: "Montaje" }, "año ausente"],
     [{ title: "La senda", year: 2025, role_in_production: "  " }, "rol vacío"],
-  ])("rechaza producciones con %s", (input) => {
+  ])("rechaza producciones con %s", ([input]) => {
     expect(filmographyInputSchema.safeParse(input).success).toBe(false);
   });
 
