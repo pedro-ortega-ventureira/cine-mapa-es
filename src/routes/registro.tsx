@@ -734,6 +734,7 @@ function RegistroPage() {
           <div>
             <Label>Código postal *</Label>
             <Input
+              type="text"
               value={form.raw_postal_code}
               onChange={(e) => {
                 setForm({

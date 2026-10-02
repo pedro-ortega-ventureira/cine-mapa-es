@@ -75,7 +75,11 @@ const publicProfessionalInputSchema = z.object({
 // Nota: `postal_codes` está vacío en `municipalities`, así que el buscador del
 // formulario cruza por nombre y provincia. Si algún día se puebla (ver
 // /api/public/seed-postal-codes), la búsqueda por CP funcionará sin cambios.
-async function resolveMunicipality(db: AdminClient, code: string | null | undefined) {
+async function resolveMunicipality(
+  db: AdminClient,
+  code: string | null | undefined,
+  rawPostalCode: string | null | undefined,
+) {
   if (!code) {
     throw new Error(
       "Elige tu municipio de residencia en el buscador: el directorio solo admite municipios de menos de 20.000 habitantes.",
@@ -83,7 +87,7 @@ async function resolveMunicipality(db: AdminClient, code: string | null | undefi
   }
   const { data, error } = await db
     .from("municipalities")
-    .select("code,name,province,population,lat,lng")
+    .select("code,name,province,population,lat,lng,postal_codes")
     .eq("code", code)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -97,6 +101,15 @@ async function resolveMunicipality(db: AdminClient, code: string | null | undefi
       `El directorio solo admite profesionales residentes en municipios de menos de ${MAX_MUNICIPALITY_POPULATION.toLocaleString("es-ES")} habitantes. ${data.name} (${data.province}) tiene ${(data.population ?? 0).toLocaleString("es-ES")}.`,
     );
   }
+  const postalCode = rawPostalCode?.trim() ?? "";
+  if (!/^\d{5}$/.test(postalCode)) {
+    throw new Error("El código postal es obligatorio y debe tener 5 dígitos.");
+  }
+  if (!(data.postal_codes ?? []).includes(postalCode)) {
+    throw new Error(
+      `El código postal ${postalCode} no corresponde a ${data.name} (${data.province}). Selecciona el municipio indicado por tu código postal.`,
+    );
+  }
   return data as {
     code: string;
     name: string;
@@ -105,6 +118,48 @@ async function resolveMunicipality(db: AdminClient, code: string | null | undefi
     lat: number | null;
     lng: number | null;
   };
+}
+
+/**
+ * Imported profiles predate `professionals.user_id`. When the professional
+ * signs in, claim the sole legacy profile that uses the same email instead of
+ * letting registration create a second one.
+ */
+async function claimLegacyProfile(db: AdminClient, userId: string, email: unknown) {
+  if (typeof email !== "string" || !email.trim()) return null;
+
+  const { data: candidates, error } = await db
+    .from("professionals")
+    .select("id")
+    .is("user_id", null)
+    .ilike("email", email.trim())
+    .limit(2);
+  if (error) throw new Error(error.message);
+
+  // Never guess when an import contains more than one profile with the same
+  // contact email; those cases need an administrator to consolidate them.
+  if ((candidates?.length ?? 0) !== 1) return null;
+
+  const { data, error: claimError } = await db
+    .from("professionals")
+    .update({ user_id: userId } as ProfessionalUpdate)
+    .eq("id", candidates![0].id)
+    .is("user_id", null)
+    .select()
+    .maybeSingle();
+  if (claimError) throw new Error(claimError.message);
+  return data;
+}
+
+async function hasUnclaimedLegacyProfile(db: AdminClient, email: unknown) {
+  if (typeof email !== "string" || !email.trim()) return false;
+  const { count, error } = await db
+    .from("professionals")
+    .select("id", { count: "exact", head: true })
+    .is("user_id", null)
+    .ilike("email", email.trim());
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
 }
 
 export const getMyProfessional = createServerFn({ method: "POST" })
@@ -117,7 +172,7 @@ export const getMyProfessional = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? null;
+    return data ?? claimLegacyProfile(db, context.userId, context.claims.email);
   });
 
 export const registerProfessional = createServerFn({ method: "POST" })
@@ -135,7 +190,23 @@ export const registerProfessional = createServerFn({ method: "POST" })
       throw new Error("Ya tienes un perfil registrado. Edítalo en lugar de crear uno nuevo.");
     }
 
-    const municipality = await resolveMunicipality(db, data.municipality_code);
+    const legacyProfile = await claimLegacyProfile(db, context.userId, context.claims.email);
+    if (legacyProfile) {
+      throw new Error(
+        "Hemos encontrado y vinculado tu perfil anterior. Recarga la página para editarlo.",
+      );
+    }
+    if (await hasUnclaimedLegacyProfile(db, context.claims.email)) {
+      throw new Error(
+        "Ya existe un perfil importado con este correo. Contacta con soporte para vincularlo y evitar duplicados.",
+      );
+    }
+
+    const municipality = await resolveMunicipality(
+      db,
+      data.municipality_code,
+      data.raw_postal_code,
+    );
 
     // Un slug puede colisionar (mismo nombre + mismos 4 caracteres al azar) y
     // la columna es UNIQUE NOT NULL, así que se reintenta en vez de devolver
@@ -192,7 +263,11 @@ export const updateMyProfessional = createServerFn({ method: "POST" })
     if (findError) throw new Error(findError.message);
     if (!existing) throw new Error("No tienes un perfil todavía. Regístrate primero.");
 
-    const municipality = await resolveMunicipality(db, data.municipality_code);
+    const municipality = await resolveMunicipality(
+      db,
+      data.municipality_code,
+      data.raw_postal_code,
+    );
 
     const payload = {
       ...data,
