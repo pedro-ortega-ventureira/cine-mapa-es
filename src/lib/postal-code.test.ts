@@ -6,6 +6,10 @@ describe("postalCodeForLookup", () => {
     expect(postalCodeForLookup(" 15113 ")).toBe("15113");
   });
 
+  it("preserves a leading zero in a postal code", () => {
+    expect(postalCodeForLookup("01001")).toBe("01001");
+  });
+
   it("does not query while the postal code is incomplete or invalid", () => {
     expect(postalCodeForLookup("1511")).toBeNull();
     expect(postalCodeForLookup("15A13")).toBeNull();

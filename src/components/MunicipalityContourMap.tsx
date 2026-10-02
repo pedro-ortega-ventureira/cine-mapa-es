@@ -13,6 +13,28 @@ type Props = {
 
 const GEOJSON_URL = "/geo/municipios-lt20k.geojson";
 
+function normalizeMunicipalityName(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function municipalityNameKeys(value: unknown) {
+  const raw = String(value ?? "").trim();
+  const normalized = normalizeMunicipalityName(raw);
+  if (!normalized) return new Set<string>();
+  const keys = new Set([normalized]);
+  const articleAtEnd = raw.match(/^(.*?)\s*\((el|la|los|las)\)$/i);
+  if (articleAtEnd) {
+    keys.add(normalizeMunicipalityName(`${articleAtEnd[2]} ${articleAtEnd[1]}`));
+  }
+  return keys;
+}
+
 let cachedGeo: GeoJSON.FeatureCollection | null = null;
 let cachedPromise: Promise<GeoJSON.FeatureCollection> | null = null;
 function loadMunicipalities(): Promise<GeoJSON.FeatureCollection> {
@@ -70,14 +92,18 @@ export function MunicipalityContourMap({
       const fc = await loadMunicipalities();
       if (cancelled) return;
 
-      const codeStr = municipalityCode ? String(municipalityCode).padStart(5, "0") : null;
-      const nameNorm = (municipalityName ?? "").trim().toLowerCase();
+      // `municipalities.code` is an internal slug (e.g. "huesca-alerre"),
+      // while the GeoJSON uses the five-digit INE code. Only compare by code
+      // when an actual INE code was provided; otherwise match by name.
+      const rawCode = String(municipalityCode ?? "").trim();
+      const ineCode = /^\d{5}$/.test(rawCode) ? rawCode : null;
+      const nameKeys = municipalityNameKeys(municipalityName);
 
       const feature = fc.features.find((f) => {
         const props: any = f.properties ?? {};
         const ine = String(props.codigo_ine ?? "").padStart(5, "0");
-        if (codeStr && ine === codeStr) return true;
-        if (!codeStr && nameNorm && String(props.municipio ?? "").toLowerCase() === nameNorm)
+        if (ineCode && ine === ineCode) return true;
+        if (!ineCode && nameKeys.has(normalizeMunicipalityName(props.municipio)))
           return true;
         return false;
       });
