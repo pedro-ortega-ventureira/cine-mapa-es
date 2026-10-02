@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +116,22 @@ const emptyForm: FormState = {
   tags: "",
 };
 
+const registrationDraftKey = (userId: string) => `registro-draft:${userId}`;
+
+function readRegistrationDraft(userId: string): Partial<FormState> | null {
+  try {
+    const raw = sessionStorage.getItem(registrationDraftKey(userId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Partial<FormState>)
+      : null;
+  } catch {
+    // A corrupt or unavailable browser storage must never prevent editing.
+    return null;
+  }
+}
+
 function rowToForm(row: ProfessionalRow): FormState {
   return {
     full_name: row.full_name ?? "",
@@ -229,6 +245,7 @@ function RegistroPage() {
   const [form, setForm] = useState<FormState>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [autoFilledFromCp, setAutoFilledFromCp] = useState(false);
+  const profileLoadedForUser = useRef<string | null>(null);
 
   // La API de Supabase pagina las respuestas grandes, por lo que el listado
   // general no es fiable para resolver un CP. Se consulta el CP exacto en la
@@ -306,17 +323,44 @@ function RegistroPage() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    const userId = session?.user.id;
+    if (!userId || profileLoadedForUser.current === userId) return;
+    let cancelled = false;
     (async () => {
       try {
         const row = await getMineFn();
+        if (cancelled) return;
+        const serverForm = row ? rowToForm(row) : { ...emptyForm, email: session.user?.email ?? "" };
+        // Si la página se recarga o se desmonta mientras la persona escribe,
+        // se recupera el borrador de esta pestaña antes que los datos guardados.
+        const draft = readRegistrationDraft(userId);
         setExisting(row);
-        setForm(row ? rowToForm(row) : { ...emptyForm, email: session.user?.email ?? "" });
+        setForm(draft ? { ...serverForm, ...draft } : serverForm);
+        profileLoadedForUser.current = userId;
       } catch (e) {
+        if (cancelled) return;
         toast.error(e instanceof Error ? e.message : "No se pudo cargar tu perfil");
       }
     })();
-  }, [session, getMineFn]);
+    return () => {
+      cancelled = true;
+    };
+    // La sesión se renueva periódicamente. Recargar la ficha con cada renovación
+    // sustituía valores aún no guardados por los que había en la base de datos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId || profileLoadedForUser.current !== userId) return;
+    try {
+      // sessionStorage limita la recuperación a la pestaña actual y evita
+      // conservar indefinidamente los datos personales del formulario.
+      sessionStorage.setItem(registrationDraftKey(userId), JSON.stringify(form));
+    } catch {
+      // Algunos navegadores bloquean el almacenamiento; el formulario sigue funcionando.
+    }
+  }, [form, session?.user.id]);
 
   async function handleAuthSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -458,6 +502,11 @@ function RegistroPage() {
         ? await updateFn({ data: payload })
         : await registerFn({ data: payload });
       setExisting(row);
+      try {
+        sessionStorage.removeItem(registrationDraftKey(session!.user.id));
+      } catch {
+        // El perfil se ha guardado aunque el navegador no permita limpiar el borrador.
+      }
       toast.success(
         existing ? "Perfil actualizado" : "¡Perfil publicado! Ya apareces en el directorio.",
       );
