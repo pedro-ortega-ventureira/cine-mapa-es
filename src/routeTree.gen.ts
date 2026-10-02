@@ -9,40 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as DirectorioRouteImport } from './routes/directorio'
-import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as RegistroRouteImport } from './routes/registro'
-import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as MunicipiosCodigoRouteImport } from './routes/municipios.$codigo'
+import { Route as MapaRouteImport } from './routes/mapa'
+import { Route as DirectorioRouteImport } from './routes/directorio'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfesionalesSlugRouteImport } from './routes/profesionales.$slug'
+import { Route as MunicipiosCodigoRouteImport } from './routes/municipios.$codigo'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
-import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
-import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
-import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_authenticated/admin.profesionales'
-import { Route as ApiPublicSeedMunicipalitiesRouteImport } from './routes/api/public/seed-municipalities'
-import { Route as ApiPublicSeedPostalCodesRouteImport } from './routes/api/public/seed-postal-codes'
 import { Route as ApiTmdbSplatRouteImport } from './routes/api/tmdb.$'
+import { Route as ApiPublicSeedPostalCodesRouteImport } from './routes/api/public/seed-postal-codes'
+import { Route as ApiPublicSeedMunicipalitiesRouteImport } from './routes/api/public/seed-municipalities'
+import { Route as AuthenticatedAdminProfesionalesRouteImport } from './routes/_authenticated/admin.profesionales'
+import { Route as AuthenticatedAdminMunicipiosRouteImport } from './routes/_authenticated/admin.municipios'
+import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin.importar'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DirectorioRoute = DirectorioRouteImport.update({
-  id: '/directorio',
-  path: '/directorio',
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapaRoute = MapaRouteImport.update({
@@ -50,19 +36,23 @@ const MapaRoute = MapaRouteImport.update({
   path: '/mapa',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegistroRoute = RegistroRouteImport.update({
-  id: '/registro',
-  path: '/registro',
+const DirectorioRoute = DirectorioRouteImport.update({
+  id: '/directorio',
+  path: '/directorio',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const MunicipiosCodigoRoute = MunicipiosCodigoRouteImport.update({
-  id: '/municipios/$codigo',
-  path: '/municipios/$codigo',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfesionalesSlugRoute = ProfesionalesSlugRouteImport.update({
@@ -70,15 +60,42 @@ const ProfesionalesSlugRoute = ProfesionalesSlugRouteImport.update({
   path: '/profesionales/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MunicipiosCodigoRoute = MunicipiosCodigoRouteImport.update({
+  id: '/municipios/$codigo',
+  path: '/municipios/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminImportarRoute =
-  AuthenticatedAdminImportarRouteImport.update({
-    id: '/importar',
-    path: '/importar',
+const ApiTmdbSplatRoute = ApiTmdbSplatRouteImport.update({
+  id: '/api/tmdb/$',
+  path: '/api/tmdb/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeedPostalCodesRoute =
+  ApiPublicSeedPostalCodesRouteImport.update({
+    id: '/api/public/seed-postal-codes',
+    path: '/api/public/seed-postal-codes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSeedMunicipalitiesRoute =
+  ApiPublicSeedMunicipalitiesRouteImport.update({
+    id: '/api/public/seed-municipalities',
+    path: '/api/public/seed-municipalities',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAdminProfesionalesRoute =
+  AuthenticatedAdminProfesionalesRouteImport.update({
+    id: '/profesionales',
+    path: '/profesionales',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminMunicipiosRoute =
@@ -87,29 +104,12 @@ const AuthenticatedAdminMunicipiosRoute =
     path: '/municipios',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminProfesionalesRoute =
-  AuthenticatedAdminProfesionalesRouteImport.update({
-    id: '/profesionales',
-    path: '/profesionales',
+const AuthenticatedAdminImportarRoute =
+  AuthenticatedAdminImportarRouteImport.update({
+    id: '/importar',
+    path: '/importar',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const ApiPublicSeedMunicipalitiesRoute =
-  ApiPublicSeedMunicipalitiesRouteImport.update({
-    id: '/api/public/seed-municipalities',
-    path: '/api/public/seed-municipalities',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeedPostalCodesRoute =
-  ApiPublicSeedPostalCodesRouteImport.update({
-    id: '/api/public/seed-postal-codes',
-    path: '/api/public/seed-postal-codes',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiTmdbSplatRoute = ApiTmdbSplatRouteImport.update({
-  id: '/api/tmdb/$',
-  path: '/api/tmdb/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -233,32 +233,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/directorio': {
-      id: '/directorio'
-      path: '/directorio'
-      fullPath: '/directorio'
-      preLoaderRoute: typeof DirectorioRouteImport
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mapa': {
@@ -268,25 +247,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/registro': {
-      id: '/registro'
-      path: '/registro'
-      fullPath: '/registro'
-      preLoaderRoute: typeof RegistroRouteImport
+    '/directorio': {
+      id: '/directorio'
+      path: '/directorio'
+      fullPath: '/directorio'
+      preLoaderRoute: typeof DirectorioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/municipios/$codigo': {
-      id: '/municipios/$codigo'
-      path: '/municipios/$codigo'
-      fullPath: '/municipios/$codigo'
-      preLoaderRoute: typeof MunicipiosCodigoRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profesionales/$slug': {
@@ -296,6 +282,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/municipios/$codigo': {
+      id: '/municipios/$codigo'
+      path: '/municipios/$codigo'
+      fullPath: '/municipios/$codigo'
+      preLoaderRoute: typeof MunicipiosCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -303,32 +303,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/importar': {
-      id: '/_authenticated/admin/importar'
-      path: '/importar'
-      fullPath: '/admin/importar'
-      preLoaderRoute: typeof AuthenticatedAdminImportarRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/municipios': {
-      id: '/_authenticated/admin/municipios'
-      path: '/municipios'
-      fullPath: '/admin/municipios'
-      preLoaderRoute: typeof AuthenticatedAdminMunicipiosRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/profesionales': {
-      id: '/_authenticated/admin/profesionales'
-      path: '/profesionales'
-      fullPath: '/admin/profesionales'
-      preLoaderRoute: typeof AuthenticatedAdminProfesionalesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/api/public/seed-municipalities': {
-      id: '/api/public/seed-municipalities'
-      path: '/api/public/seed-municipalities'
-      fullPath: '/api/public/seed-municipalities'
-      preLoaderRoute: typeof ApiPublicSeedMunicipalitiesRouteImport
+    '/api/tmdb/$': {
+      id: '/api/tmdb/$'
+      path: '/api/tmdb/$'
+      fullPath: '/api/tmdb/$'
+      preLoaderRoute: typeof ApiTmdbSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/seed-postal-codes': {
@@ -338,12 +317,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSeedPostalCodesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tmdb/$': {
-      id: '/api/tmdb/$'
-      path: '/api/tmdb/$'
-      fullPath: '/api/tmdb/$'
-      preLoaderRoute: typeof ApiTmdbSplatRouteImport
+    '/api/public/seed-municipalities': {
+      id: '/api/public/seed-municipalities'
+      path: '/api/public/seed-municipalities'
+      fullPath: '/api/public/seed-municipalities'
+      preLoaderRoute: typeof ApiPublicSeedMunicipalitiesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/profesionales': {
+      id: '/_authenticated/admin/profesionales'
+      path: '/profesionales'
+      fullPath: '/admin/profesionales'
+      preLoaderRoute: typeof AuthenticatedAdminProfesionalesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/municipios': {
+      id: '/_authenticated/admin/municipios'
+      path: '/municipios'
+      fullPath: '/admin/municipios'
+      preLoaderRoute: typeof AuthenticatedAdminMunicipiosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/importar': {
+      id: '/_authenticated/admin/importar'
+      path: '/importar'
+      fullPath: '/admin/importar'
+      preLoaderRoute: typeof AuthenticatedAdminImportarRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
   }
 }
