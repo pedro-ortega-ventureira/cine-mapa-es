@@ -1,0 +1,305 @@
+.aulos-order-gift-notice {
+	border: 1px solid #d9cec0;
+	border-left: 3px solid #6d1f2c;
+	background: #f5f2ec;
+	color: #171717;
+	margin: 1rem 0;
+	padding: 1rem 1.1rem;
+}
+
+.aulos-order-gift-notice[hidden] {
+	display: none;
+}
+
+/* Shared visual language for the complete WooCommerce journey. */
+body.woocommerce-page {
+	--aulos-ink: #171717;
+	--aulos-paper: #f5f2ec;
+	--aulos-raised: #fcfbf8;
+	--aulos-line: #d8d2c8;
+	--aulos-muted: #6f6a62;
+	--aulos-wine: #6d1f2c;
+	--aulos-wine-hover: #4f1420;
+	background: var(--aulos-paper);
+	color: var(--aulos-ink);
+	font-family: Inter, Arial, sans-serif;
+}
+
+body.woocommerce-page .site-content,
+body.woocommerce-page .content-area {
+	background: var(--aulos-paper);
+}
+
+.woocommerce-page :is(h1, h2) {
+	color: #171717 !important;
+	font-family: "Cormorant Garamond", Georgia, serif;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	line-height: 1.06;
+}
+
+.woocommerce-page :is(h3, .woocommerce-loop-product__title) {
+	color: #171717 !important;
+	font-family: "Cormorant Garamond", Georgia, serif;
+	font-weight: 600;
+	letter-spacing: -0.015em;
+	line-height: 1.14;
+}
+
+.woocommerce-page .woocommerce-loop-product__title {
+	font-size: clamp(1.35rem, 2vw, 1.8rem);
+	margin: 0.9rem 0 0.45rem;
+}
+
+.woocommerce-page :is(.woocommerce-result-count, .woocommerce-ordering, .woocommerce-product-details__short-description, .product_meta, .woocommerce-tabs, .woocommerce-cart-form, .woocommerce-checkout, .woocommerce-info, .woocommerce-message, .woocommerce-error) {
+	color: var(--aulos-ink);
+	font-family: Inter, Arial, sans-serif;
+}
+
+.woocommerce-page .woocommerce-result-count,
+.woocommerce-page .product_meta,
+.woocommerce-page .woocommerce-loop-category__title mark {
+	color: var(--aulos-muted) !important;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+}
+
+.woocommerce-page ul.products li.product {
+	border-bottom: 1px solid var(--aulos-line);
+	padding-bottom: 1.5rem;
+}
+
+.woocommerce-page ul.products li.product a {
+	color: var(--aulos-ink);
+}
+
+.woocommerce-page :is(.price, .woocommerce-Price-amount, .woocommerce-Price-currencySymbol) {
+	color: var(--aulos-wine) !important;
+	font-weight: 700;
+}
+
+.woocommerce-page :is(input, select, textarea) {
+	background: var(--aulos-raised);
+	border: 1px solid var(--aulos-line);
+	border-radius: 0;
+	color: var(--aulos-ink);
+	font-family: Inter, Arial, sans-serif;
+	min-height: 44px;
+}
+
+.woocommerce-page :is(.button, button, input[type="submit"]) {
+	background: var(--aulos-ink);
+	border: 1px solid var(--aulos-ink);
+	border-radius: 0;
+	color: var(--aulos-paper) !important;
+	font-family: Inter, Arial, sans-serif;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	min-height: 44px;
+	padding: 0.8rem 1.2rem;
+	text-transform: uppercase;
+}
+
+.woocommerce-page :is(.button, button, input[type="submit"]):hover,
+.woocommerce-page :is(.button, button, input[type="submit"]):focus-visible {
+	background: var(--aulos-wine-hover);
+	border-color: var(--aulos-wine-hover);
+	color: var(--aulos-paper) !important;
+}
+
+.woocommerce-page :is(a, button, input, select, textarea):focus-visible {
+	outline: 3px solid #1a5da8;
+	outline-offset: 3px;
+}
+
+.woocommerce-page :is(.woocommerce-info, .woocommerce-message, .woocommerce-error, .cart_totals, .woocommerce-checkout-review-order, .woocommerce-form-coupon, .woocommerce-form-login) {
+	background: var(--aulos-raised);
+	border-color: var(--aulos-line);
+	border-radius: 0;
+}
+
+.woocommerce-page a:not(.button) {
+	color: var(--aulos-wine-hover);
+	text-decoration-color: #b78742;
+	text-underline-offset: 0.18em;
+}
+
+/* Override Botiga's more specific cart controls and link palette. */
+.woocommerce-page .quantity :is(input.qty, input.input-text) {
+	background: var(--aulos-raised) !important;
+	border-color: var(--aulos-line) !important;
+	color: var(--aulos-ink) !important;
+}
+
+.woocommerce-page :is(.woocommerce-cart-form, .woocommerce-checkout) a:not(.button) {
+	color: var(--aulos-wine-hover) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.woocommerce-page *,
+	.woocommerce-page *::before,
+	.woocommerce-page *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+.aulos-order-gift-notice__eyebrow {
+	display: block;
+	color: #6d1f2c;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	line-height: 1.3;
+	margin-bottom: 0.3rem;
+	text-transform: uppercase;
+}
+
+.aulos-order-gift-notice p {
+	margin: 0;
+}
+
+.aulos-order-gift-notice:focus-visible {
+	outline: 3px solid #1a5da8;
+	outline-offset: 3px;
+}
+
+/* Editorial product treatment shared by the product page and Botiga quick view. */
+.single-product .summary.entry-summary,
+.botiga-quick-view-popup .summary.entry-summary {
+	background: #f5f2ec;
+	border: 1px solid #d8d2c8;
+	color: #171717;
+	padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.single-product .product_title {
+	color: #171717 !important;
+	font-family: Georgia, serif;
+	font-weight: 500;
+	letter-spacing: -0.035em;
+	line-height: 1.05;
+}
+
+.botiga-quick-view-popup .product_title {
+	color: #4f1420 !important;
+	font-family: Georgia, serif;
+	font-weight: 500;
+	letter-spacing: -0.035em;
+	line-height: 1.05;
+}
+
+.single-product .summary :is(.price, .woocommerce-product-details__short-description, .product_meta, .variations label),
+.botiga-quick-view-popup .summary :is(.price, .woocommerce-product-details__short-description, .product_meta, .variations label) {
+	color: #171717;
+}
+
+.single-product .summary .price,
+.botiga-quick-view-popup .summary .price {
+	color: #6d1f2c;
+	font-weight: 700;
+}
+
+.single-product .summary select,
+.botiga-quick-view-popup .summary select {
+	background: #fcfbf8;
+	border: 1px solid #d8d2c8;
+	color: #171717;
+}
+
+.single-product .single_add_to_cart_button {
+	background: #171717;
+	border: 1px solid #171717;
+	color: #f5f2ec;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	min-height: 44px;
+	text-transform: uppercase;
+}
+
+.botiga-quick-view-popup .single_add_to_cart_button {
+	background: #171717;
+	border: 1px solid #171717;
+	color: #f5f2ec;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	min-height: 44px;
+	text-transform: uppercase;
+}
+
+.single-product .single_add_to_cart_button:hover,
+.single-product .single_add_to_cart_button:focus-visible,
+.botiga-quick-view-popup .single_add_to_cart_button:hover,
+.botiga-quick-view-popup .single_add_to_cart_button:focus-visible {
+	background: #4f1420;
+	border-color: #4f1420;
+	color: #f5f2ec;
+}
+
+.single-product .summary a:not(.button),
+.botiga-quick-view-popup .summary a:not(.button) {
+	color: #4f1420;
+}
+
+.single-product .summary :is(a, button, select):focus-visible,
+.botiga-quick-view-popup .summary :is(a, button, select):focus-visible {
+	outline: 3px solid #1a5da8;
+	outline-offset: 3px;
+}
+
+.single-product .woocommerce-breadcrumb {
+	display: none;
+}
+
+.single-product .summary .price,
+.botiga-quick-view-popup .summary .price {
+	color: #4f1420 !important;
+	font-size: clamp(1.5rem, 3vw, 2.25rem);
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	margin: 0.9rem 0 1.4rem;
+}
+
+.single-product .summary .price :is(.woocommerce-Price-amount, .woocommerce-Price-currencySymbol),
+.botiga-quick-view-popup .summary .price :is(.woocommerce-Price-amount, .woocommerce-Price-currencySymbol) {
+	color: #4f1420 !important;
+}
+
+.single-product .product_meta,
+.botiga-quick-view-popup .product_meta {
+	border-top: 1px solid #d8d2c8;
+	color: #6f6a62 !important;
+	font-size: 0.72rem;
+	letter-spacing: 0.04em;
+	line-height: 1.6;
+	padding-top: 1rem;
+}
+
+.single-product .product_meta .posted_in,
+.botiga-quick-view-popup .product_meta .posted_in {
+	color: #6d1f2c !important;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.single-product .product_meta .posted_in a,
+.botiga-quick-view-popup .product_meta .posted_in a {
+	color: #4f1420 !important;
+	text-decoration-color: #b78742;
+	text-underline-offset: 0.18em;
+}
+
+@media (max-width: 767px) {
+	.aulos-order-gift-notice {
+		margin: 1rem 0;
+	}
+}
