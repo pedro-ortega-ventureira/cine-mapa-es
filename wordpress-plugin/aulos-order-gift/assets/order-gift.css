@@ -138,6 +138,10 @@ body.woocommerce-page .content-area {
 	color: var(--aulos-wine-hover) !important;
 }
 
+.single-product .woocommerce-tabs ul.tabs li a {
+	color: var(--aulos-wine-hover) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.woocommerce-page *,
 	.woocommerce-page *::before,

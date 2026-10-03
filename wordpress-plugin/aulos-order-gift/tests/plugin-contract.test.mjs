@@ -163,6 +163,12 @@ test('overrides Botiga cart quantity and purchase-flow links with the Aulós pal
   assert.match(stylesheet, /\.woocommerce-page :is\(\.woocommerce-cart-form, \.woocommerce-checkout\) a:not\(\.button\)[^{]*\{[^}]*color:\s*var\(--aulos-wine-hover\)\s*!important/s);
 });
 
+test('uses the Aulós wine color for product information tabs', async () => {
+  const stylesheet = await readFile(new URL('../assets/order-gift.css', import.meta.url), 'utf8');
+
+  assert.match(stylesheet, /\.single-product \.woocommerce-tabs ul\.tabs li a[^{]*\{[^}]*color:\s*var\(--aulos-wine-hover\)\s*!important/s);
+});
+
 test('keeps external and free-only purchase paths out of the storefront promotion', async () => {
   const [policy, presentation, stylesheet] = await Promise.all([
     readFile(policyPath, 'utf8'),
