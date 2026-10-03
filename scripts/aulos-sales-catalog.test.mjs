@@ -144,7 +144,9 @@ test('renders an editorial sales page with semantic headings and no invented aut
   });
 
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(html, /<h1[^>]*>La vanguardia prerrafaelista<\/h1>/);
+  assert.match(html, /<h1[^>]*>Catálogo de Ediciones Aulós<\/h1>/);
+  assert.match(html, /<h2[^>]*>La vanguardia prerrafaelista<\/h2>/);
+  assert.match(html, /Con cada compra realizada en la tienda Aulós recibirás de regalo el PDF de <em>Estética y romanticismos<\/em>\./);
   assert.match(html, />Ver edición</);
   assert.match(html, />Añadir al carrito</);
   assert.doesNotMatch(html, /Autor desconocido/);
