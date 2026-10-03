@@ -8,6 +8,13 @@ import {
   renderSalesCatalog,
   selectCollectionProducts,
 } from './lib/aulos-sales-catalog.mjs';
+import {
+  assertRemoteUnchanged,
+  buildElementorActions,
+  executePublicationMode,
+  redactSecrets,
+  validateStagingUrl,
+} from './publish-aulos-sales-catalog.mjs';
 
 const categoryFixtures = [
   { id: 11, name: 'Aulós Humanidades', slug: 'aulos-humanidades', count: 2 },
@@ -150,4 +157,64 @@ test('renders an editorial sales page with semantic headings and no invented aut
   assert.match(html, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(html, /\.aulos-catalog--paper\s+:is\(h1,h2,h3\)\s*\{[^}]*color:\s*var\(--aulos-ink\)/s);
   assert.match(html, /@media\s*\(max-width:\s*767px\)/);
+});
+
+test('rejects every publication host except the authorized staging host', () => {
+  assert.equal(validateStagingUrl('https://staging8.aulos.es/catalogo/').hostname, 'staging8.aulos.es');
+  assert.throws(() => validateStagingUrl('https://aulos.es/catalogo/'), /staging8\.aulos\.es/);
+  assert.throws(() => validateStagingUrl('https://staging8.aulos.es.evil.test/catalogo/'), /staging8\.aulos\.es/);
+});
+
+test('redacts every configured secret from diagnostic errors', () => {
+  const secrets = ['basic-secret', 'wp-secret', 'nonce-secret'];
+  const message = redactSecrets('Failed basic-secret wp-secret nonce-secret', secrets);
+
+  assert.equal(message, 'Failed [REDACTED] [REDACTED] [REDACTED]');
+});
+
+test('builds one idempotent Elementor document around the rendered catalogue', () => {
+  const first = buildElementorActions('<main class="aulos-catalog">Catálogo</main>', {
+    title: 'Catálogo',
+    status: 'publish',
+  });
+  const second = buildElementorActions('<main class="aulos-catalog">Catálogo</main>', {
+    title: 'Catálogo',
+    status: 'publish',
+  });
+
+  assert.deepEqual(first, second);
+  assert.equal(first.save_builder.data.elements.length, 1);
+  assert.equal(first.save_builder.data.elements[0].elements[0].widgetType, 'html');
+  assert.match(first.save_builder.data.elements[0].elements[0].settings.html, /aulos-catalog/);
+});
+
+test('stops publication when the remote Elementor document changed after reading', () => {
+  assert.doesNotThrow(() => assertRemoteUnchanged('sha-a', 'sha-a'));
+  assert.throws(() => assertRemoteUnchanged('sha-a', 'sha-b'), /cambió/);
+});
+
+test('dry run retrieves state without calling any write operation', async () => {
+  const calls = [];
+  const client = {
+    async fetchCatalog() {
+      calls.push('fetchCatalog');
+      return { products: productFixtures, categories: categoryFixtures };
+    },
+    async fetchPage() {
+      calls.push('fetchPage');
+      return null;
+    },
+    async createPage() {
+      calls.push('createPage');
+    },
+    async saveElementor() {
+      calls.push('saveElementor');
+    },
+  };
+
+  const result = await executePublicationMode('--dry-run', client);
+
+  assert.deepEqual(calls, ['fetchCatalog', 'fetchPage']);
+  assert.equal(result.heroId, 6197);
+  assert.equal(result.writes, 0);
 });
