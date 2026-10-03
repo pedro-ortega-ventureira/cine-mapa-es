@@ -159,6 +159,39 @@ test('renders an editorial sales page with semantic headings and no invented aut
   assert.match(html, /@media\s*\(max-width:\s*767px\)/);
 });
 
+test('renders unique anchors when collections repeat in the complete catalogue', () => {
+  const state = normalizeCatalogState(productFixtures, categoryFixtures);
+  const html = renderSalesCatalog({
+    hero: buildHeroModel(productFixtures[0]),
+    collections: selectCollectionProducts(state, COLLECTIONS, 4),
+  });
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+
+  assert.equal(new Set(ids).size, ids.length);
+  assert.match(html, /id="aulos-humanidades"/);
+  assert.match(html, /id="aulos-humanidades-todas"/);
+});
+
+test('limits the featured collection but keeps every edition in the complete catalogue', () => {
+  const extraHumanities = [2, 3, 4, 5].map((id) => ({
+    ...productFixtures[1],
+    id: 7000 + id,
+    name: `Humanidades ${id}`,
+    permalink: `https://staging8.aulos.es/producto/humanidades-${id}/`,
+    date_created: `2025-01-0${id}T10:00:00`,
+  }));
+  const state = normalizeCatalogState([...productFixtures, ...extraHumanities], categoryFixtures);
+  const html = renderSalesCatalog({
+    hero: buildHeroModel(productFixtures[0]),
+    collections: selectCollectionProducts(state, COLLECTIONS, 4),
+    allCollections: selectCollectionProducts(state, COLLECTIONS, Number.POSITIVE_INFINITY),
+  });
+  const [featured, complete] = html.split('id="todas-las-ediciones"');
+
+  assert.doesNotMatch(featured, /Humanidades anteriores/);
+  assert.match(complete, /Humanidades anteriores/);
+});
+
 test('rejects every publication host except the authorized staging host', () => {
   assert.equal(validateStagingUrl('https://staging8.aulos.es/catalogo/').hostname, 'staging8.aulos.es');
   assert.throws(() => validateStagingUrl('https://aulos.es/catalogo/'), /staging8\.aulos\.es/);

@@ -320,10 +320,12 @@ export async function executePublicationMode(mode, client) {
   const rawHero = catalog.products.find((product) => Number(product.id) === 6197);
   const hero = prepareHero({ ...heroProduct, internal_variation: rawHero?.internal_variation ?? null });
   const collections = selectCollectionProducts(state, COLLECTIONS, 4);
+  const allCollections = selectCollectionProducts(state, COLLECTIONS, Number.POSITIVE_INFINITY);
   const page = await client.fetchPage();
   const manifest = {
     heroId: hero.id,
-    collectionCounts: Object.fromEntries(COLLECTIONS.map((item) => [item.name, collections.find((group) => group.slug === item.slug)?.products.length ?? 0])),
+    collectionCounts: Object.fromEntries(COLLECTIONS.map((item) => [item.name, allCollections.find((group) => group.slug === item.slug)?.products.length ?? 0])),
+    featuredCounts: Object.fromEntries(COLLECTIONS.map((item) => [item.name, collections.find((group) => group.slug === item.slug)?.products.length ?? 0])),
     pageId: page?.id ?? null,
     targetSlug: 'catalogo',
     writes: 0,
@@ -342,7 +344,7 @@ export async function executePublicationMode(mode, client) {
     manifest.writes += 1;
   }
   const current = await client.fetchCurrentElementorDocument(targetPage.id);
-  const rendered = renderSalesCatalog({ hero, collections });
+  const rendered = renderSalesCatalog({ hero, collections, allCollections });
   await client.saveElementor(targetPage.id, current.hash, rendered);
   manifest.pageId = targetPage.id;
   manifest.writes += 1;

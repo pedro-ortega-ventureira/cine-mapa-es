@@ -160,10 +160,11 @@ function renderProductCard(product) {
   </article>`;
 }
 
-function renderCollection(collection, modifier = '') {
-  return `<section class="aulos-catalog__collection ${modifier}" id="${escapeHtml(collection.slug)}">
+function renderCollection(collection, { modifier = '', idSuffix = '', headingLevel = 2 } = {}) {
+  const headingTag = headingLevel === 3 ? 'h3' : 'h2';
+  return `<section class="aulos-catalog__collection ${modifier}" id="${escapeHtml(collection.slug + idSuffix)}">
     <div class="aulos-catalog__section-heading">
-      <div><p class="aulos-catalog__eyebrow">Colección</p><h2>${escapeHtml(collection.name)}</h2></div>
+      <div><p class="aulos-catalog__eyebrow">Colección</p><${headingTag}>${escapeHtml(collection.name)}</${headingTag}></div>
       <p>${escapeHtml(collection.description)}</p>
     </div>
     <div class="aulos-catalog__grid">${collection.products.map(renderProductCard).join('')}</div>
@@ -171,7 +172,7 @@ function renderCollection(collection, modifier = '') {
   </section>`;
 }
 
-export function renderSalesCatalog({ hero, collections }) {
+export function renderSalesCatalog({ hero, collections, allCollections = collections }) {
   const addToCart = hero.addToCartUrl
     ? `<a class="aulos-catalog__button aulos-catalog__button--primary" href="${escapeHtml(hero.addToCartUrl)}" data-product_id="${hero.id}" rel="nofollow">Añadir al carrito</a>`
     : '';
@@ -193,7 +194,7 @@ export function renderSalesCatalog({ hero, collections }) {
   <nav class="aulos-catalog__nav" aria-label="Colecciones">${collections.map((collection) => `<a href="#${escapeHtml(collection.slug)}">${escapeHtml(collection.name)}</a>`).join('')}</nav>
   <div class="aulos-catalog__inner">
     ${collections.map((collection) => renderCollection(collection)).join('')}
-    <section class="aulos-catalog__collection aulos-catalog__all" aria-labelledby="todas-las-ediciones"><div class="aulos-catalog__section-heading"><div><p class="aulos-catalog__eyebrow">Catálogo</p><h2 id="todas-las-ediciones">Todas las ediciones</h2></div><p>Recorre el fondo editorial por líneas de investigación, formatos y afinidades.</p></div>${collections.map((collection) => renderCollection(collection, 'aulos-catalog__collection--nested')).join('')}</section>
+    <section class="aulos-catalog__collection aulos-catalog__all" aria-labelledby="todas-las-ediciones"><div class="aulos-catalog__section-heading"><div><p class="aulos-catalog__eyebrow">Catálogo</p><h2 id="todas-las-ediciones">Todas las ediciones</h2></div><p>Recorre el fondo editorial por líneas de investigación, formatos y afinidades.</p></div>${allCollections.map((collection) => renderCollection(collection, { modifier: 'aulos-catalog__collection--nested', idSuffix: '-todas', headingLevel: 3 })).join('')}</section>
   </div>
 </main>`;
 }
