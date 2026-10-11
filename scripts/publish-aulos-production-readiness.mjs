@@ -77,7 +77,13 @@ class Session {
   }
   async verify() {
     const base = stagingUrl(this.config.AULOS_STAGING_URL).origin;
-    const shop = await this.request(`${base}/shop/?s=arte`, { headers: { 'Cache-Control': 'no-cache' } });
+    const marker = Date.now();
+    const shopSource = `${base}/shop/?s=arte&orderby=date`;
+    const shop = await this.request(shopSource, { headers: { 'Cache-Control': 'no-cache' } });
+    const catalog = await this.request(`${base}/catalogo/?readiness_verify=${marker}`, { headers: { 'Cache-Control': 'no-cache' } });
+    const catalogHtml = await catalog.text();
+    const catalogCanonical = catalogHtml.match(/<link\b[^>]*rel=["'][^"']*canonical[^"']*["'][^>]*href=["']([^"']+)/i)?.[1]
+      ?? catalogHtml.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*rel=["'][^"']*canonical/i)?.[1] ?? '';
     const home = await this.request(`${base}/?security_verify=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
     const exclusions = {};
     for (const route of ['/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/', '/carrito/', '/mi-cuenta/']) {
@@ -85,7 +91,10 @@ class Session {
     }
     return {
       shopStatus: shop.status,
+      shopSource,
       shopLocation: shop.headers.get('location') ?? '',
+      catalogStatus: catalog.status,
+      catalogCanonical,
       exclusions,
       headers: {
         referrerPolicy: home.headers.get('referrer-policy') ?? '', permissionsPolicy: home.headers.get('permissions-policy') ?? '',
@@ -97,7 +106,10 @@ class Session {
 }
 
 function assertVerification(result, expectedCspMode) {
-  if (result.shopStatus !== 301 || !result.shopLocation.includes('/catalogo/?s=arte')) throw new Error('La redirección de /shop/ no coincide con el contrato.');
+  if (result.shopStatus !== 301) throw new Error('La redirección de /shop/ debe ser 301.');
+  const source = new URL(result.shopSource); const target = new URL(result.shopLocation, result.shopSource);
+  if (target.origin !== source.origin || target.pathname !== '/catalogo/' || target.search !== source.search) throw new Error('La redirección de /shop/ no coincide exactamente con el contrato.');
+  if (result.catalogStatus !== 200 || result.catalogCanonical !== `${source.origin}/catalogo/`) throw new Error('El catálogo no responde 200 con canonical propio.');
   if (Object.values(result.exclusions).some((status) => status !== 200)) throw new Error('La redirección afecta a una ruta excluida.');
   if (!result.headers.referrerPolicy || !result.headers.permissionsPolicy || !result.headers.frameProtection) throw new Error('Faltan cabeceras de seguridad.');
   if (expectedCspMode === 'report-only' ? !result.headers.cspReportOnly : !result.headers.csp) throw new Error('La CSP no está en el modo esperado.');
@@ -115,12 +127,12 @@ async function main() {
   if (mode === '--apply') {
     if (before) throw new Error('El plugin ya existe; se cancela para no sobrescribirlo.');
   } else {
-    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.1') throw new Error('La versión remota no se puede reemplazar de forma segura.');
+    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.2') throw new Error('La versión remota no se puede reemplazar de forma segura.');
     await client.remove();
   }
   await client.upload(zipPath); await client.setStatus('active');
-  const after = await client.state(); const verification = await client.verify(); const expectedMode = after.version === '1.0.0' ? 'report-only' : 'enforce';
-  if (mode === '--replace' && after.version !== '1.0.2') throw new Error('La versión instalada no coincide con 1.0.2.');
+  const after = await client.state(); const verification = await client.verify(); const expectedMode = 'report-only';
+  if (mode === '--replace' && after.version !== '1.0.3') throw new Error('La versión instalada no coincide con 1.0.3.');
   assertVerification(verification, expectedMode);
   console.log(JSON.stringify({ status: after.status, version: after.version, expectedMode, verification }, null, 2));
 }

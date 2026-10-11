@@ -1,13 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-import { auditPage, renderAuditReport, summarizeAudit } from './lib/aulos-production-audit.mjs';
+import { auditPage, compareAuditRuns, renderAuditReport, summarizeAudit, validateCatalogContract } from './lib/aulos-production-audit.mjs';
 
 const HOST = 'staging8.aulos.es';
 const ROUTES = [
   '/',
   '/catalogo/',
-  '/shop/',
+  '/shop/?s=arte&orderby=date',
   '/zine/',
   '/publica-con-aulos/',
   '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/',
@@ -42,10 +42,11 @@ async function main() {
   }
   const base = stagingBase(config.AULOS_STAGING_URL);
   const authorization = `Basic ${Buffer.from(`${config.AULOS_BASIC_USER}:${config.AULOS_BASIC_PASSWORD}`).toString('base64')}`;
-  const pages = [];
-  for (const route of ROUTES) {
+  async function runAudit(runId) {
+    const pages = [];
+    for (const [index, route] of ROUTES.entries()) {
     const target = new URL(route, base);
-    target.searchParams.set('aulos_audit', Date.now().toString());
+    target.searchParams.set('aulos_audit', `${runId}-${index}`);
     const response = await fetch(target, {
       headers: { Authorization: authorization, 'Cache-Control': 'no-cache', 'User-Agent': 'Codex Aulos Production Audit' },
       redirect: 'manual',
@@ -53,16 +54,37 @@ async function main() {
     const html = response.headers.get('content-type')?.includes('text/html') ? await response.text() : '';
     pages.push({
       ...auditPage(html, response.headers, new URL(route, base), response.status),
+      requestedUrl: target.toString(),
       redirect: response.headers.get('location') ?? '',
+      cache: {
+        age: response.headers.get('age') ?? '',
+        cacheControl: response.headers.get('cache-control') ?? '',
+        cacheStatus: response.headers.get('x-cache') ?? response.headers.get('cf-cache-status') ?? response.headers.get('x-proxy-cache-info') ?? '',
+      },
     });
+    }
+    return pages;
   }
-  const report = renderAuditReport(pages);
+  const firstRunId = `${Date.now()}-a`;
+  const secondRunId = `${Date.now()}-b`;
+  const first = await runAudit(firstRunId);
+  const second = await runAudit(secondRunId);
+  const differences = compareAuditRuns(first, second);
+  if (differences.length) throw new Error(`La auditoría no es estable entre ejecuciones: ${differences.join('; ')}`);
+  const shop = second.find((page) => new URL(page.url).pathname === '/shop/');
+  const catalog = second.find((page) => new URL(page.url).pathname === '/catalogo/');
+  validateCatalogContract({ shop: { ...shop, url: shop.requestedUrl }, catalog });
+  const pages = second;
+  const evidence = `\n## Evidencia reproducible\n\n- Dos ejecuciones independientes y estables: \`${firstRunId}\` y \`${secondRunId}\`.\n- Todas las rutas usaron un parámetro de cache-busting único y \`Cache-Control: no-cache\`.\n- Contrato verificado: \`/shop/\` responde 301 al mismo origen, destino exacto \`/catalogo/\`, conserva la query; el catálogo responde 200 y es autocanónico.\n- La CSP usa una lista explícita de orígenes y permanece en \`Report-Only\` en staging hasta su promoción deliberada.\n`;
+  const report = `${renderAuditReport(pages).trimEnd()}\n${evidence}`;
   await writeFile('docs/auditoria-preproduccion-aulos.md', report, { mode: 0o644 });
   const summary = summarizeAudit(pages);
   console.log(JSON.stringify({
     pages: pages.length,
     statuses: Object.fromEntries(pages.map((page) => [new URL(page.url).pathname, page.status])),
     ...summary,
+    runIds: [firstRunId, secondRunId],
+    stable: true,
     output: 'docs/auditoria-preproduccion-aulos.md',
   }, null, 2));
 }

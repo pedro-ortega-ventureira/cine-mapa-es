@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aulós Production Readiness
  * Description: Redirección canónica del catálogo y cabeceras HTTP de seguridad para Aulós.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Ediciones Aulós
  * Requires PHP: 7.4
  */
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 final class Aulos_Production_Readiness
 {
-    private const CSP = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://www.paypal.com https://*.stripe.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:; media-src 'self' blob: https:; worker-src 'self' blob:";
+    private const CSP = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://www.paypal.com https://*.stripe.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://stats.wp.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.gravatar.com https://*.wp.com https://stats.wp.com https://www.google-analytics.com https://www.googletagmanager.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.google-analytics.com https://*.stripe.com https://stats.wp.com https://www.googletagmanager.com; frame-src 'self' https://*.stripe.com https://www.paypal.com https://mistericaland.substack.com; media-src 'self' blob:; worker-src 'self' blob:";
 
     public static function init(): void
     {
@@ -56,7 +56,7 @@ final class Aulos_Production_Readiness
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()', true);
         header('X-Frame-Options: SAMEORIGIN', true);
 
-        $mode = (string) apply_filters('aulos_csp_mode', 'enforce');
+        $mode = (string) apply_filters('aulos_csp_mode', 'report-only');
         $name = $mode === 'enforce' ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only';
         header($name . ': ' . self::CSP, true);
     }

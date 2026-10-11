@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { auditPage, renderAuditReport, summarizeAudit } from './lib/aulos-production-audit.mjs';
+import { auditPage, compareAuditRuns, renderAuditReport, summarizeAudit, validateCatalogContract } from './lib/aulos-production-audit.mjs';
 
 test('extrae metadatos, canonical y jerarquía del contenido principal', () => {
   const html = `<!doctype html><html><head>
@@ -90,6 +90,25 @@ test('trata una redirección esperada como ruta técnica sin exigir metadatos', 
 
   assert.match(report, /`\/shop\/` → `\/catalogo\/` \(HTTP 301\)/);
   assert.doesNotMatch(report, /sin H1|sin título|sin metadescripción|sin canonical/);
+});
+
+test('exige redirección 301 exacta, mismo origen, query intacta y catálogo autocanónico', () => {
+  const base = 'https://staging8.aulos.es';
+  const catalog = { url: `${base}/catalogo/`, status: 200, canonical: `${base}/catalogo/` };
+  assert.doesNotThrow(() => validateCatalogContract({
+    shop: { url: `${base}/shop/?s=arte&orderby=date`, status: 301, redirect: `${base}/catalogo/?s=arte&orderby=date` },
+    catalog,
+  }));
+  assert.throws(() => validateCatalogContract({ shop: { url: `${base}/shop/?s=arte`, status: 302, redirect: `${base}/catalogo/?s=arte` }, catalog }), /301/);
+  assert.throws(() => validateCatalogContract({ shop: { url: `${base}/shop/?s=arte`, status: 301, redirect: `${base}/catalogo/` }, catalog }), /query/);
+  assert.throws(() => validateCatalogContract({ shop: { url: `${base}/shop/`, status: 301, redirect: 'https://example.org/catalogo/' }, catalog }), /origen/);
+  assert.throws(() => validateCatalogContract({ shop: { url: `${base}/shop/`, status: 301, redirect: `${base}/catalogo/` }, catalog: { ...catalog, canonical: `${base}/shop/` } }), /autocanónico/);
+});
+
+test('compara dos auditorías independientes y detecta inestabilidad estructural', () => {
+  const page = { url: 'https://staging8.aulos.es/', status: 200, redirect: '', canonical: 'https://staging8.aulos.es/', h1Count: 1, mainH1Count: 1, title: 'Inicio', security: { contentSecurityPolicy: 'csp', referrerPolicy: 'ref', permissionsPolicy: 'perm', frameProtection: 'frame' } };
+  assert.deepEqual(compareAuditRuns([page], [{ ...page }]), []);
+  assert.match(compareAuditRuns([page], [{ ...page, mainH1Count: 2 }])[0], /mainH1Count/);
 });
 
 test('el resumen excluye redirecciones de los requisitos editoriales', () => {

@@ -109,7 +109,8 @@ export function renderAuditReport(pages, { generatedAt = new Date().toISOString(
     const headingSummary = page.headings.map(({ level, text }) => `H${level} ${text}`).join(' · ');
     return `| \`${escapeCell(path)}\` | ${page.status} | ${escapeCell(page.title)} | ${escapeCell(page.description)} | ${escapeCell(page.canonical)} | ${page.h1Count}/${page.mainH1Count} | ${escapeCell(headingSummary)} |`;
   });
-  return `# Auditoría de preproducción de Aulós\n\nFecha: ${generatedAt}\nEntorno: \`staging8.aulos.es\` (lectura autenticada).\n\n## Bloqueantes\n\n${blockers.join('\n') || '- Ninguno detectado.'}\n\n## Recomendaciones\n\n${recommendations.join('\n') || '- Ninguna detectada.'}\n\n## Redirecciones\n\n${redirects.join('\n') || '- Ninguna detectada.'}\n\n## Inventario SEO y semántico\n\n| Ruta | HTTP | Título | Metadescripción | Canonical | H1 total/main | Encabezados |\n|---|---:|---|---|---|---:|---|\n${rows.join('\n')}\n`;
+  const verdict = blockers.length ? '**NO APTO.** Quedan bloqueantes técnicos.' : '**APTO CON OBSERVACIONES.** No se detectan bloqueantes técnicos; quedan mejoras editoriales de SEO y la compra completa no forma parte de esta auditoría.';
+  return `# Auditoría de preproducción de Aulós\n\nFecha: ${generatedAt}\nEntorno: \`staging8.aulos.es\` (lectura autenticada).\n\n## Veredicto\n\n${verdict}\n\n## Bloqueantes\n\n${blockers.join('\n') || '- Ninguno detectado.'}\n\n## Recomendaciones\n\n${recommendations.join('\n') || '- Ninguna detectada.'}\n\n## Redirecciones\n\n${redirects.join('\n') || '- Ninguna detectada.'}\n\n## Inventario SEO y semántico\n\n| Ruta | HTTP | Título | Metadescripción | Canonical | H1 total/main | Encabezados |\n|---|---:|---|---|---|---:|---|\n${rows.join('\n')}\n`;
 }
 
 export function summarizeAudit(pages) {
@@ -119,4 +120,37 @@ export function summarizeAudit(pages) {
     missingDescriptions: editorial.filter((page) => !page.description).length,
     missingCanonicals: editorial.filter((page) => !page.canonical).length,
   };
+}
+
+export function validateCatalogContract({ shop, catalog }) {
+  if (shop.status !== 301) throw new Error('La ruta /shop/ debe responder exactamente 301.');
+  const source = new URL(shop.url);
+  const target = new URL(shop.redirect, shop.url);
+  if (target.origin !== source.origin) throw new Error('La redirección debe conservar el origen.');
+  if (target.pathname !== '/catalogo/') throw new Error('La redirección debe apuntar exactamente a /catalogo/.');
+  if (target.search !== source.search) throw new Error('La redirección debe conservar la query exacta.');
+  const catalogUrl = new URL(catalog.url);
+  if (catalog.status !== 200) throw new Error('El catálogo debe responder 200.');
+  if (catalog.canonical !== `${catalogUrl.origin}/catalogo/`) throw new Error('El catálogo debe ser autocanónico.');
+}
+
+export function compareAuditRuns(first, second) {
+  const fields = ['status', 'canonical', 'h1Count', 'mainH1Count', 'title'];
+  const differences = [];
+  const right = new Map(second.map((page) => [new URL(page.url).pathname, page]));
+  for (const page of first) {
+    const path = new URL(page.url).pathname;
+    const other = right.get(path);
+    if (!other) { differences.push(`${path}: ausente en la segunda ejecución`); continue; }
+    for (const field of fields) if ((page[field] ?? '') !== (other[field] ?? '')) differences.push(`${path}: ${field} no es estable`);
+    const normalizedRedirect = (value) => {
+      if (!value) return '';
+      const url = new URL(value, page.url);
+      url.searchParams.delete('aulos_audit');
+      return url.toString();
+    };
+    if (normalizedRedirect(page.redirect) !== normalizedRedirect(other.redirect)) differences.push(`${path}: redirect no es estable`);
+    for (const field of Object.keys(page.security ?? {})) if ((page.security[field] ?? '') !== (other.security?.[field] ?? '')) differences.push(`${path}: security.${field} no es estable`);
+  }
+  return differences;
 }

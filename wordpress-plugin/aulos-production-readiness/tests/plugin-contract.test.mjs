@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { collectExternalOrigins, homeOverflowCss, redirectShopUrl, securityHeaders } from '../../../scripts/lib/aulos-production-readiness.mjs';
+import { readFile } from 'node:fs/promises';
+import { AULOS_CSP, collectExternalOrigins, homeOverflowCss, redirectShopUrl, securityHeaders } from '../../../scripts/lib/aulos-production-readiness.mjs';
 
 test('redirige solo la raíz exacta de shop y conserva la query', () => {
   assert.equal(redirectShopUrl('https://staging8.aulos.es/shop/'), 'https://staging8.aulos.es/catalogo/');
@@ -37,6 +38,21 @@ test('cambia exclusivamente el nombre de CSP al pasar a enforce', () => {
     Object.fromEntries(Object.entries(enforce).filter(([name]) => name !== 'Content-Security-Policy')),
     Object.fromEntries(Object.entries(reportOnly).filter(([name]) => name !== 'Content-Security-Policy-Report-Only')),
   );
+});
+
+test('la CSP usa orígenes explícitos y no permite cualquier host HTTPS', () => {
+  assert.doesNotMatch(AULOS_CSP, /(?:^|\s)https:(?:\s|;|$)/);
+  for (const origin of ['https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'https://js.stripe.com', 'https://www.googletagmanager.com']) {
+    assert.match(AULOS_CSP, new RegExp(origin.replaceAll('.', '\\.')));
+  }
+});
+
+test('el PHP desplegable comparte la CSP, versión y modo seguro del contrato', async () => {
+  const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
+  const policy = php.match(/private const CSP = "([^"]+)";/)?.[1];
+  assert.equal(policy, AULOS_CSP);
+  assert.match(php, /Version:\s*1\.0\.3/);
+  assert.match(php, /apply_filters\('aulos_csp_mode', 'report-only'\)/);
 });
 
 test('inventaría solo orígenes externos usados por recursos o formularios', () => {
