@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { auditPage, renderAuditReport } from './lib/aulos-production-audit.mjs';
+import { auditPage, renderAuditReport, summarizeAudit } from './lib/aulos-production-audit.mjs';
 
 test('extrae metadatos, canonical y jerarquía del contenido principal', () => {
   const html = `<!doctype html><html><head>
@@ -77,4 +77,44 @@ test('el informe resume textos extensos para seguir siendo revisable', () => {
 
   assert.doesNotMatch(report, new RegExp(longDescription));
   assert.match(report, /a{80,}…/);
+});
+
+test('trata una redirección esperada como ruta técnica sin exigir metadatos', () => {
+  const pages = [{
+    url: 'https://staging8.aulos.es/shop/', status: 301, redirect: 'https://staging8.aulos.es/catalogo/',
+    title: '', description: '', canonical: '', headings: [], h1Count: 0, mainH1Count: 0,
+    security: { contentSecurityPolicy: 'ok', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
+  }];
+
+  const report = renderAuditReport(pages);
+
+  assert.match(report, /`\/shop\/` → `\/catalogo\/` \(HTTP 301\)/);
+  assert.doesNotMatch(report, /sin H1|sin título|sin metadescripción|sin canonical/);
+});
+
+test('el resumen excluye redirecciones de los requisitos editoriales', () => {
+  const pages = [
+    { status: 301, redirect: 'https://staging8.aulos.es/catalogo/', mainH1Count: 0, description: '', canonical: '' },
+    { status: 200, redirect: '', mainH1Count: 1, description: '', canonical: 'https://staging8.aulos.es/mi-cuenta/' },
+  ];
+
+  assert.deepEqual(summarizeAudit(pages), { totalH1Issues: 0, missingDescriptions: 1, missingCanonicals: 0 });
+});
+
+test('ignora etiquetas de encabezado incluidas dentro de scripts y estilos', () => {
+  const html = '<main><h1>Revista</h1><script>const card = "<h2>\'+post.title+\'</h2>";</script><style>.x:after{content:"<h3>Fake</h3>"}</style><h2>Artículos</h2></main>';
+  const audit = auditPage(html, new Headers(), 'https://staging8.aulos.es/zine/');
+  assert.deepEqual(audit.headings.map(({ level, text }) => ({ level, text })), [
+    { level: 1, text: 'Revista' },
+    { level: 2, text: 'Artículos' },
+  ]);
+});
+
+test('señala metadescripciones que exceden la longitud recomendada', () => {
+  const pages = [{
+    url: 'https://staging8.aulos.es/', status: 200, redirect: '', title: 'Inicio', description: 'a'.repeat(181),
+    canonical: 'https://staging8.aulos.es/', headings: [{ level: 1, text: 'Inicio', inMain: true }], h1Count: 1, mainH1Count: 1,
+    security: { contentSecurityPolicy: 'ok', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
+  }];
+  assert.match(renderAuditReport(pages), /metadescripción demasiado larga \(181 caracteres\)/);
 });

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aulós Production Readiness
  * Description: Redirección canónica del catálogo y cabeceras HTTP de seguridad para Aulós.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Ediciones Aulós
  * Requires PHP: 7.4
  */
@@ -21,6 +21,7 @@ final class Aulos_Production_Readiness
     {
         add_action('template_redirect', [self::class, 'redirect_shop_root'], 1);
         add_action('send_headers', [self::class, 'send_security_headers']);
+        add_action('wp_head', [self::class, 'fix_front_page_overflow']);
     }
 
     public static function redirect_shop_root(): void
@@ -58,6 +59,14 @@ final class Aulos_Production_Readiness
         $mode = (string) apply_filters('aulos_csp_mode', 'enforce');
         $name = $mode === 'enforce' ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only';
         header($name . ': ' . self::CSP, true);
+    }
+
+    public static function fix_front_page_overflow(): void
+    {
+        if (!is_front_page()) {
+            return;
+        }
+        echo '<style id="aulos-home-overflow-fix">body.home .content-wrapper > .main-row{margin-left:0!important;margin-right:0!important}</style>';
     }
 }
 

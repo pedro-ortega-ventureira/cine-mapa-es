@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { collectExternalOrigins, redirectShopUrl, securityHeaders } from '../../../scripts/lib/aulos-production-readiness.mjs';
+import { collectExternalOrigins, homeOverflowCss, redirectShopUrl, securityHeaders } from '../../../scripts/lib/aulos-production-readiness.mjs';
 
 test('redirige solo la raíz exacta de shop y conserva la query', () => {
   assert.equal(redirectShopUrl('https://staging8.aulos.es/shop/'), 'https://staging8.aulos.es/catalogo/');
@@ -48,4 +48,12 @@ test('inventaría solo orígenes externos usados por recursos o formularios', ()
     'https://js.stripe.com',
     'https://www.paypal.com',
   ]);
+});
+
+test('limita la corrección de desbordamiento a la fila principal de la home', () => {
+  const css = homeOverflowCss();
+  assert.match(css, /^body\.home \.content-wrapper > \.main-row/);
+  assert.match(css, /margin-left:\s*0!important/);
+  assert.match(css, /margin-right:\s*0!important/);
+  assert.doesNotMatch(css, /(^|,)\s*\.row\b/);
 });

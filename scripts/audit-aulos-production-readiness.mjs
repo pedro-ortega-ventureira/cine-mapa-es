@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-import { auditPage, renderAuditReport } from './lib/aulos-production-audit.mjs';
+import { auditPage, renderAuditReport, summarizeAudit } from './lib/aulos-production-audit.mjs';
 
 const HOST = 'staging8.aulos.es';
 const ROUTES = [
@@ -58,12 +58,11 @@ async function main() {
   }
   const report = renderAuditReport(pages);
   await writeFile('docs/auditoria-preproduccion-aulos.md', report, { mode: 0o644 });
+  const summary = summarizeAudit(pages);
   console.log(JSON.stringify({
     pages: pages.length,
     statuses: Object.fromEntries(pages.map((page) => [new URL(page.url).pathname, page.status])),
-    totalH1Issues: pages.filter((page) => page.mainH1Count !== 1).length,
-    missingDescriptions: pages.filter((page) => !page.description).length,
-    missingCanonicals: pages.filter((page) => !page.canonical).length,
+    ...summary,
     output: 'docs/auditoria-preproduccion-aulos.md',
   }, null, 2));
 }

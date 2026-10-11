@@ -46,4 +46,8 @@ export function collectExternalOrigins(html, baseUrl) {
   return [...origins].sort();
 }
 
+export function homeOverflowCss() {
+  return 'body.home .content-wrapper > .main-row{margin-left:0!important;margin-right:0!important}';
+}
+
 export { CSP as AULOS_CSP };

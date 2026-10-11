@@ -115,11 +115,12 @@ async function main() {
   if (mode === '--apply') {
     if (before) throw new Error('El plugin ya existe; se cancela para no sobrescribirlo.');
   } else {
-    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.0') throw new Error('La versión remota no se puede reemplazar de forma segura.');
+    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.1') throw new Error('La versión remota no se puede reemplazar de forma segura.');
     await client.remove();
   }
   await client.upload(zipPath); await client.setStatus('active');
   const after = await client.state(); const verification = await client.verify(); const expectedMode = after.version === '1.0.0' ? 'report-only' : 'enforce';
+  if (mode === '--replace' && after.version !== '1.0.2') throw new Error('La versión instalada no coincide con 1.0.2.');
   assertVerification(verification, expectedMode);
   console.log(JSON.stringify({ status: after.status, version: after.version, expectedMode, verification }, null, 2));
 }
