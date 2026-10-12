@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { readFile } from 'node:fs/promises';
-import { AULOS_CSP, collectExternalOrigins, homeOverflowCss, redirectShopUrl, securityHeaders } from '../../../scripts/lib/aulos-production-readiness.mjs';
+import { AULOS_CSP, collectExternalOrigins, homeOverflowCss, redirectShopUrl, securityHeaders, seoMetadata } from '../../../scripts/lib/aulos-production-readiness.mjs';
 
 test('redirige solo la raíz exacta de shop y conserva la query', () => {
   assert.equal(redirectShopUrl('https://staging8.aulos.es/shop/'), 'https://staging8.aulos.es/catalogo/');
@@ -51,8 +51,37 @@ test('el PHP desplegable comparte la CSP, versión y modo seguro del contrato', 
   const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
   const policy = php.match(/private const CSP = "([^"]+)";/)?.[1];
   assert.equal(policy, AULOS_CSP);
-  assert.match(php, /Version:\s*1\.0\.3/);
-  assert.match(php, /apply_filters\('aulos_csp_mode', 'report-only'\)/);
+  assert.match(php, /Version:\s*1\.1\.0/);
+  assert.match(php, /get_option\('aulos_csp_mode', 'report-only'\)/);
+});
+
+test('define SEO editorial breve para todas las rutas indexables auditadas', () => {
+  for (const path of ['/', '/catalogo/', '/zine/', '/publica-con-aulos/', '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/', '/terminos-y-condiciones/', '/politica-de-privacidad/', '/politica-de-cookies-ue/', '/reembolso_devoluciones/']) {
+    const meta = seoMetadata(path);
+    assert.ok(meta.title, `${path} sin título`);
+    assert.ok(meta.description, `${path} sin descripción`);
+    assert.ok(meta.title.length <= 60, `${path} título demasiado largo`);
+    assert.ok(meta.description.length <= 160, `${path} descripción demasiado larga`);
+    assert.equal(meta.robots, 'index,follow');
+  }
+});
+
+test('marca páginas transaccionales como noindex,follow y no altera otras rutas', () => {
+  assert.equal(seoMetadata('/carrito/').robots, 'noindex,follow');
+  assert.equal(seoMetadata('/mi-cuenta/').robots, 'noindex,follow');
+  assert.equal(seoMetadata('/acerca-de/'), null);
+});
+
+test('el PHP registra filtros AIOSEO y una opción REST de promoción CSP', async () => {
+  const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
+  for (const hook of ['aioseo_title', 'aioseo_description', 'aioseo_robots_meta']) assert.match(php, new RegExp(`add_filter\\('${hook}'`));
+  assert.match(php, /register_setting\('general', 'aulos_csp_mode'/);
+  assert.match(php, /show_in_rest.*true/s);
+});
+
+test('el comando verify aplica las aserciones de producción antes de informar éxito', async () => {
+  const publisher = await readFile(new URL('../../../scripts/publish-aulos-production-readiness.mjs', import.meta.url), 'utf8');
+  assert.match(publisher, /mode === '--verify'[\s\S]*assertVerification\(result, 'enforce'\)[\s\S]*console\.log/);
 });
 
 test('inventaría solo orígenes externos usados por recursos o formularios', () => {

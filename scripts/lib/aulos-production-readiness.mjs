@@ -14,6 +14,26 @@ const CSP = [
   "worker-src 'self' blob:",
 ].join('; ');
 
+const SEO = {
+  '/': { title: 'Ediciones Aulós | Libros de arte y humanidades', description: 'Editorial independiente de arte, estética, cine y humanidades. Descubre libros académicos cuidados y publica tu investigación con Aulós.' },
+  '/catalogo/': { title: 'Catálogo de libros | Ediciones Aulós', description: 'Descubre el catálogo de Ediciones Aulós: libros de arte, estética, cine, filosofía, ocultura y humanidades editados con rigor y cuidado.' },
+  '/zine/': { title: 'Aulós Zine | Arte, cine y pensamiento', description: 'Revista académica de Ediciones Aulós sobre arte, cine, estética, historia, ocultura y humanidades digitales. ISSN 2952-4148.' },
+  '/publica-con-aulos/': { title: 'Publica tu investigación | Ediciones Aulós', description: 'Convierte tu tesis, TFM, catálogo o proyecto de investigación en un libro cuidado, riguroso y con recorrido editorial junto a Ediciones Aulós.' },
+  '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/': { title: 'Leer la Luna: tarot y cine | Ediciones Aulós', description: 'Descubre Leer la Luna, de Carlos A. Cuéllar Alejandro: un ensayo sobre el simbolismo lunar, el tarot y su presencia en la historia del cine.' },
+  '/terminos-y-condiciones/': { title: 'Términos y condiciones | Ediciones Aulós', description: 'Consulta las condiciones de acceso, uso y compra de libros y publicaciones en la tienda online de Ediciones Aulós.' },
+  '/politica-de-privacidad/': { title: 'Política de privacidad | Ediciones Aulós', description: 'Conoce cómo Ediciones Aulós trata y protege los datos personales de quienes navegan, contactan o compran en su sitio web.' },
+  '/politica-de-cookies-ue/': { title: 'Política de cookies | Ediciones Aulós', description: 'Información sobre las cookies utilizadas por Ediciones Aulós, sus finalidades y las opciones disponibles para gestionar el consentimiento.' },
+  '/reembolso_devoluciones/': { title: 'Devoluciones y reembolsos | Ediciones Aulós', description: 'Consulta la política de desistimiento, devoluciones y reembolsos aplicable a libros impresos y publicaciones digitales de Ediciones Aulós.' },
+  '/carrito/': { robots: 'noindex,follow' },
+  '/mi-cuenta/': { robots: 'noindex,follow' },
+};
+
+export function seoMetadata(pathname) {
+  const value = SEO[pathname];
+  if (!value) return null;
+  return { title: '', description: '', robots: 'index,follow', ...value };
+}
+
 export function redirectShopUrl(value) {
   const url = new URL(value);
   if (!['/shop', '/shop/'].includes(url.pathname)) return null;

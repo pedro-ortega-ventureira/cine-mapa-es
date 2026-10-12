@@ -69,6 +69,15 @@ class Session {
     const response = await this.request(`${base}/wp-json/wp/v2/plugins/${PLUGIN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     if (!response.ok) throw new Error(`No se pudo cambiar el estado del plugin (${response.status}).`);
   }
+  async setCspMode(mode) {
+    const base = stagingUrl(this.config.AULOS_STAGING_URL).origin;
+    const response = await this.request(`${base}/wp-json/wp/v2/settings`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aulos_csp_mode: mode }),
+    });
+    if (!response.ok) throw new Error(`No se pudo promover la CSP (${response.status}).`);
+    const settings = await response.json();
+    if (settings.aulos_csp_mode !== mode) throw new Error('WordPress no conservó el modo CSP solicitado.');
+  }
   async remove() {
     const base = stagingUrl(this.config.AULOS_STAGING_URL).origin; const current = await this.state();
     if (current?.status === 'active') await this.setStatus('inactive');
@@ -122,17 +131,17 @@ async function main() {
   for (const key of ['AULOS_STAGING_URL', 'AULOS_BASIC_USER', 'AULOS_BASIC_PASSWORD', 'AULOS_WP_USER', 'AULOS_WP_PASSWORD']) if (!config[key]) throw new Error(`Falta ${key}.`);
   const client = new Session(config); await client.login(); const before = await client.state();
   if (mode === '--inspect') { console.log(JSON.stringify({ installed: Boolean(before), status: before?.status ?? 'absent', version: before?.version ?? '' }, null, 2)); return; }
-  if (mode === '--verify') { const result = await client.verify(); console.log(JSON.stringify(result, null, 2)); return; }
+  if (mode === '--verify') { const result = await client.verify(); assertVerification(result, 'enforce'); console.log(JSON.stringify(result, null, 2)); return; }
   if (!zipPath) throw new Error('Indica la ruta del ZIP.');
   if (mode === '--apply') {
     if (before) throw new Error('El plugin ya existe; se cancela para no sobrescribirlo.');
   } else {
-    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.2') throw new Error('La versión remota no se puede reemplazar de forma segura.');
+    if (!before || before.plugin !== PLUGIN || before.version !== '1.0.3') throw new Error('La versión remota no se puede reemplazar de forma segura.');
     await client.remove();
   }
-  await client.upload(zipPath); await client.setStatus('active');
-  const after = await client.state(); const verification = await client.verify(); const expectedMode = 'report-only';
-  if (mode === '--replace' && after.version !== '1.0.3') throw new Error('La versión instalada no coincide con 1.0.3.');
+  await client.upload(zipPath); await client.setStatus('active'); await client.setCspMode('enforce');
+  const after = await client.state(); const verification = await client.verify(); const expectedMode = 'enforce';
+  if (mode === '--replace' && after.version !== '1.1.0') throw new Error('La versión instalada no coincide con 1.1.0.');
   assertVerification(verification, expectedMode);
   console.log(JSON.stringify({ status: after.status, version: after.version, expectedMode, verification }, null, 2));
 }

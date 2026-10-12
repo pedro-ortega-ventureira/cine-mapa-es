@@ -75,7 +75,8 @@ async function main() {
   const catalog = second.find((page) => new URL(page.url).pathname === '/catalogo/');
   validateCatalogContract({ shop: { ...shop, url: shop.requestedUrl }, catalog });
   const pages = second;
-  const evidence = `\n## Evidencia reproducible\n\n- Dos ejecuciones independientes y estables: \`${firstRunId}\` y \`${secondRunId}\`.\n- Todas las rutas usaron un parámetro de cache-busting único y \`Cache-Control: no-cache\`.\n- Contrato verificado: \`/shop/\` responde 301 al mismo origen, destino exacto \`/catalogo/\`, conserva la query; el catálogo responde 200 y es autocanónico.\n- La CSP usa una lista explícita de orígenes y permanece en \`Report-Only\` en staging hasta su promoción deliberada.\n`;
+  const cspMode = pages.every((page) => page.status >= 300 || page.security.cspMode === 'enforce') ? 'obligatoria (`enforce`)' : 'en observación (`Report-Only`)';
+  const evidence = `\n## Evidencia reproducible\n\n- Dos ejecuciones independientes y estables: \`${firstRunId}\` y \`${secondRunId}\`.\n- Todas las rutas usaron un parámetro de cache-busting único y \`Cache-Control: no-cache\`.\n- Contrato verificado: \`/shop/\` responde 301 al mismo origen, destino exacto \`/catalogo/\`, conserva la query; el catálogo responde 200 y es autocanónico.\n- La CSP usa una lista explícita de orígenes y está ${cspMode}.\n`;
   const report = `${renderAuditReport(pages).trimEnd()}\n${evidence}`;
   await writeFile('docs/auditoria-preproduccion-aulos.md', report, { mode: 0o644 });
   const summary = summarizeAudit(pages);

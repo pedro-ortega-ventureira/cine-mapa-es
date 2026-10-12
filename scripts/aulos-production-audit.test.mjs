@@ -32,6 +32,7 @@ test('extrae metadatos, canonical y jerarquía del contenido principal', () => {
   assert.equal(audit.mainH1Count, 1);
   assert.deepEqual(audit.security, {
     contentSecurityPolicy: "default-src 'self'",
+    cspMode: 'report-only',
     referrerPolicy: 'strict-origin-when-cross-origin',
     permissionsPolicy: 'camera=()',
     frameProtection: 'SAMEORIGIN',
@@ -53,7 +54,7 @@ test('el informe clasifica bloqueantes sin incluir secretos ni userinfo', () => 
   const pages = [{
     url: 'https://staging8.aulos.es/shop/', status: 200, title: '', description: '', canonical: 'https://staging8.aulos.es/shop/',
     headings: [], h1Count: 0, mainH1Count: 0,
-    security: { contentSecurityPolicy: '', referrerPolicy: '', permissionsPolicy: '', frameProtection: '' },
+    security: { contentSecurityPolicy: '', cspMode: '', referrerPolicy: '', permissionsPolicy: '', frameProtection: '' },
   }];
 
   const report = renderAuditReport(pages, { generatedAt: '2026-10-11T00:00:00.000Z' });
@@ -106,9 +107,11 @@ test('exige redirección 301 exacta, mismo origen, query intacta y catálogo aut
 });
 
 test('compara dos auditorías independientes y detecta inestabilidad estructural', () => {
-  const page = { url: 'https://staging8.aulos.es/', status: 200, redirect: '', canonical: 'https://staging8.aulos.es/', h1Count: 1, mainH1Count: 1, title: 'Inicio', security: { contentSecurityPolicy: 'csp', referrerPolicy: 'ref', permissionsPolicy: 'perm', frameProtection: 'frame' } };
+  const page = { url: 'https://staging8.aulos.es/', status: 200, redirect: '', canonical: 'https://staging8.aulos.es/', h1Count: 1, mainH1Count: 1, title: 'Inicio', description: 'Editorial', robots: 'index', security: { contentSecurityPolicy: 'csp', cspMode: 'enforce', referrerPolicy: 'ref', permissionsPolicy: 'perm', frameProtection: 'frame' } };
   assert.deepEqual(compareAuditRuns([page], [{ ...page }]), []);
   assert.match(compareAuditRuns([page], [{ ...page, mainH1Count: 2 }])[0], /mainH1Count/);
+  assert.match(compareAuditRuns([page], [{ ...page, description: 'Otro texto' }])[0], /description/);
+  assert.match(compareAuditRuns([page], [{ ...page, robots: 'noindex' }])[0], /robots/);
 });
 
 test('el resumen excluye redirecciones de los requisitos editoriales', () => {
@@ -136,4 +139,34 @@ test('señala metadescripciones que exceden la longitud recomendada', () => {
     security: { contentSecurityPolicy: 'ok', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
   }];
   assert.match(renderAuditReport(pages), /metadescripción demasiado larga \(181 caracteres\)/);
+});
+
+test('señala páginas transaccionales que siguen indexables', () => {
+  const pages = [{
+    url: 'https://staging8.aulos.es/mi-cuenta/', status: 200, redirect: '', title: 'Mi cuenta', description: '', robots: 'max-image-preview:large',
+    canonical: 'https://staging8.aulos.es/mi-cuenta/', headings: [{ level: 1, text: 'Mi cuenta', inMain: true }], h1Count: 1, mainH1Count: 1,
+    security: { contentSecurityPolicy: 'ok', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
+  }];
+  assert.match(renderAuditReport(pages), /debe usar `noindex,follow`/);
+});
+
+test('no exige metadescripción a una página transaccional noindex', () => {
+  const pages = [{
+    url: 'https://staging8.aulos.es/mi-cuenta/', status: 200, redirect: '', title: 'Mi cuenta', description: '', robots: 'noindex, follow',
+    canonical: 'https://staging8.aulos.es/mi-cuenta/', headings: [{ level: 1, text: 'Mi cuenta', inMain: true }], h1Count: 1, mainH1Count: 1,
+    security: { contentSecurityPolicy: 'ok', cspMode: 'enforce', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
+  }];
+  assert.doesNotMatch(renderAuditReport(pages), /sin metadescripción/);
+});
+
+test('bloquea una CSP que no esté en enforce y títulos de más de 60 caracteres', () => {
+  const pages = [{
+    url: 'https://staging8.aulos.es/', status: 200, redirect: '', title: 'x'.repeat(61), description: 'Editorial', robots: 'index',
+    canonical: 'https://staging8.aulos.es/', headings: [{ level: 1, text: 'Inicio', inMain: true }], h1Count: 1, mainH1Count: 1,
+    security: { contentSecurityPolicy: 'ok', cspMode: 'report-only', referrerPolicy: 'ok', permissionsPolicy: 'ok', frameProtection: 'ok' },
+  }];
+  const report = renderAuditReport(pages);
+  assert.match(report, /CSP no está en modo obligatorio/);
+  assert.match(report, /título demasiado largo \(61 caracteres\)/);
+  assert.match(report, /\*\*NO APTO\./);
 });

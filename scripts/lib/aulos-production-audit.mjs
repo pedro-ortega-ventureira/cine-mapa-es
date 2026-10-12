@@ -64,12 +64,14 @@ export function auditPage(html, headers, url, status = 200) {
     status,
     title: plainText(titleMatch?.[1] ?? ''),
     description: metaContent(source, 'description'),
+    robots: metaContent(source, 'robots'),
     canonical: canonicalHref(source),
     headings,
     h1Count: headings.filter(({ level }) => level === 1).length,
     mainH1Count: headings.filter(({ level, inMain }) => level === 1 && inMain).length,
     security: {
       contentSecurityPolicy,
+      cspMode: header(headers, 'content-security-policy') ? 'enforce' : (header(headers, 'content-security-policy-report-only') ? 'report-only' : ''),
       referrerPolicy: header(headers, 'referrer-policy'),
       permissionsPolicy: header(headers, 'permissions-policy'),
       frameProtection: header(headers, 'x-frame-options') || (/frame-ancestors/i.test(contentSecurityPolicy) ? 'CSP frame-ancestors' : ''),
@@ -99,25 +101,29 @@ export function renderAuditReport(pages, { generatedAt = new Date().toISOString(
     if (page.mainH1Count > 1) blockers.push(`- \`${path}\`: ${page.mainH1Count} H1 dentro del contenido principal.`);
     if (page.h1Count > page.mainH1Count) recommendations.push(`- \`${path}\`: ${page.h1Count - page.mainH1Count} H1 adicional fuera de \`main\`; revisar cabecera global.`);
     if (!page.title) blockers.push(`- \`${path}\`: sin título HTML.`);
-    if (!page.description) recommendations.push(`- \`${path}\`: sin metadescripción.`);
+    else if (page.title.length > 60) blockers.push(`- \`${path}\`: título demasiado largo (${page.title.length} caracteres).`);
+    const isNoindex = /\bnoindex\b/i.test(page.robots ?? '');
+    if (!page.description && !isNoindex) recommendations.push(`- \`${path}\`: sin metadescripción.`);
     else if (page.description.length > 160) recommendations.push(`- \`${path}\`: metadescripción demasiado larga (${page.description.length} caracteres).`);
     if (!page.canonical) recommendations.push(`- \`${path}\`: sin canonical.`);
+    if (['/carrito/', '/mi-cuenta/'].includes(path) && !/\bnoindex\b/i.test(page.robots ?? '')) recommendations.push(`- \`${path}\`: debe usar \`noindex,follow\`.`);
     if (Object.values(page.security).some((value) => !value)) recommendations.push(`- \`${path}\`: cabeceras de seguridad incompletas.`);
+    if (page.security.cspMode !== 'enforce') blockers.push(`- \`${path}\`: la CSP no está en modo obligatorio (enforce).`);
   }
   const rows = pages.map((page) => {
     const path = new URL(page.url).pathname;
     const headingSummary = page.headings.map(({ level, text }) => `H${level} ${text}`).join(' · ');
-    return `| \`${escapeCell(path)}\` | ${page.status} | ${escapeCell(page.title)} | ${escapeCell(page.description)} | ${escapeCell(page.canonical)} | ${page.h1Count}/${page.mainH1Count} | ${escapeCell(headingSummary)} |`;
+    return `| \`${escapeCell(path)}\` | ${page.status} | ${escapeCell(page.title)} | ${escapeCell(page.description)} | ${escapeCell(page.robots)} | ${escapeCell(page.canonical)} | ${page.h1Count}/${page.mainH1Count} | ${escapeCell(headingSummary)} |`;
   });
-  const verdict = blockers.length ? '**NO APTO.** Quedan bloqueantes técnicos.' : '**APTO CON OBSERVACIONES.** No se detectan bloqueantes técnicos; quedan mejoras editoriales de SEO y la compra completa no forma parte de esta auditoría.';
-  return `# Auditoría de preproducción de Aulós\n\nFecha: ${generatedAt}\nEntorno: \`staging8.aulos.es\` (lectura autenticada).\n\n## Veredicto\n\n${verdict}\n\n## Bloqueantes\n\n${blockers.join('\n') || '- Ninguno detectado.'}\n\n## Recomendaciones\n\n${recommendations.join('\n') || '- Ninguna detectada.'}\n\n## Redirecciones\n\n${redirects.join('\n') || '- Ninguna detectada.'}\n\n## Inventario SEO y semántico\n\n| Ruta | HTTP | Título | Metadescripción | Canonical | H1 total/main | Encabezados |\n|---|---:|---|---|---|---:|---|\n${rows.join('\n')}\n`;
+  const verdict = blockers.length ? '**NO APTO.** Quedan bloqueantes técnicos.' : recommendations.length ? '**APTO CON OBSERVACIONES.** No se detectan bloqueantes técnicos; quedan recomendaciones no bloqueantes.' : '**APTO PARA PRODUCCIÓN.** No se detectan bloqueantes ni recomendaciones pendientes dentro del alcance auditado.';
+  return `# Auditoría de preproducción de Aulós\n\nFecha: ${generatedAt}\nEntorno: \`staging8.aulos.es\` (lectura autenticada).\n\n## Veredicto\n\n${verdict}\n\nLa compra completa está excluida del alcance por decisión del propietario.\n\n## Bloqueantes\n\n${blockers.join('\n') || '- Ninguno detectado.'}\n\n## Recomendaciones\n\n${recommendations.join('\n') || '- Ninguna detectada.'}\n\n## Redirecciones\n\n${redirects.join('\n') || '- Ninguna detectada.'}\n\n## Inventario SEO y semántico\n\n| Ruta | HTTP | Título | Metadescripción | Robots | Canonical | H1 total/main | Encabezados |\n|---|---:|---|---|---|---|---:|---|\n${rows.join('\n')}\n`;
 }
 
 export function summarizeAudit(pages) {
   const editorial = pages.filter((page) => !(page.status >= 300 && page.status < 400 && page.redirect));
   return {
     totalH1Issues: editorial.filter((page) => page.mainH1Count !== 1).length,
-    missingDescriptions: editorial.filter((page) => !page.description).length,
+    missingDescriptions: editorial.filter((page) => !page.description && !/\bnoindex\b/i.test(page.robots ?? '')).length,
     missingCanonicals: editorial.filter((page) => !page.canonical).length,
   };
 }
@@ -135,7 +141,7 @@ export function validateCatalogContract({ shop, catalog }) {
 }
 
 export function compareAuditRuns(first, second) {
-  const fields = ['status', 'canonical', 'h1Count', 'mainH1Count', 'title'];
+  const fields = ['status', 'canonical', 'h1Count', 'mainH1Count', 'title', 'description', 'robots'];
   const differences = [];
   const right = new Map(second.map((page) => [new URL(page.url).pathname, page]));
   for (const page of first) {
