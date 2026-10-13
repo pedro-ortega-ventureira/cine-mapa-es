@@ -44,7 +44,7 @@ espaciosa. Se publica como un documento Elementor de ancho completo y una
    edición. Cada vía enlaza a una superficie de catálogo real.
 4. Sección «Cuatro puertas de entrada» con enlaces a las fichas existentes de
    *La vanguardia prerrafaelista*, *Leer la Luna. Tarot y cine*, *Patrimonio
-   Digital* y *Rebeldes y visionarios*.
+   Digital* y *La conquista de Portugal. Historia e iconografía*.
 5. Cierre con CTA a `/catalogo/`.
 
 No se usarán reseñas, premios, cifras, disponibilidad o declaraciones de
@@ -76,8 +76,8 @@ autoridad que no estén visibles y verificadas en las páginas destino.
 ## Criterios de aceptación
 
 - `/por-que-aulos/` responde 200 en staging y contiene exactamente un H1.
-- La página conserva el diseño aprobado y muestra *Rebeldes y visionarios* en
-  la cuarta puerta de entrada.
+- La página conserva el diseño aprobado y muestra *La conquista de Portugal.
+  Historia e iconografía* en la cuarta puerta de entrada.
 - Los cuatro enlaces de producto y los enlaces a catálogo/colecciones son
   internos y responden 200.
 - SEO renderizado: título de hasta 60 caracteres, descripción de hasta 160,
