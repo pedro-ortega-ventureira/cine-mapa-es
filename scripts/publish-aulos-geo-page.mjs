@@ -31,7 +31,7 @@ export function buildGeoElementorActions(html) {
           settings: { content_width: 'full', width: { unit: '%', size: 100, sizes: [] }, padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0', isLinked: true } },
           elements: [{ id: 'a7100002', elType: 'widget', widgetType: 'html', isInner: false, settings: { html }, elements: [] }],
         }],
-        settings: { template: 'elementor_full_width', post_title: PAGE_TITLE, post_status: 'publish', hide_title: 'yes' },
+        settings: { template: 'elementor_canvas', post_title: PAGE_TITLE, post_status: 'publish', hide_title: 'yes' },
       },
     },
   };

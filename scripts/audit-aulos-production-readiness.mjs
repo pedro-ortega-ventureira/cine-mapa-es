@@ -4,12 +4,13 @@ import { pathToFileURL } from 'node:url';
 import { auditPage, compareAuditRuns, renderAuditReport, summarizeAudit, validateCatalogContract } from './lib/aulos-production-audit.mjs';
 
 const HOST = 'staging8.aulos.es';
-const ROUTES = [
+export const AUDIT_ROUTES = [
   '/',
   '/catalogo/',
   '/shop/?s=arte&orderby=date',
   '/zine/',
   '/publica-con-aulos/',
+  '/por-que-aulos/',
   '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/',
   '/carrito/',
   '/mi-cuenta/',
@@ -44,7 +45,7 @@ async function main() {
   const authorization = `Basic ${Buffer.from(`${config.AULOS_BASIC_USER}:${config.AULOS_BASIC_PASSWORD}`).toString('base64')}`;
   async function runAudit(runId) {
     const pages = [];
-    for (const [index, route] of ROUTES.entries()) {
+    for (const [index, route] of AUDIT_ROUTES.entries()) {
     const target = new URL(route, base);
     target.searchParams.set('aulos_audit', `${runId}-${index}`);
     const response = await fetch(target, {

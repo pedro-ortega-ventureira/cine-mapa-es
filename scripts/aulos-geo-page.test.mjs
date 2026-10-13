@@ -108,6 +108,7 @@ test('publisher saves one full-width Elementor HTML document', () => {
   assert.equal(document.elements[0].elements.length, 1);
   assert.equal(document.elements[0].elements[0].widgetType, 'html');
   assert.equal(document.elements[0].elements[0].settings.html, '<main class="aulos-geo">prueba</main>');
+  assert.equal(document.settings.template, 'elementor_canvas');
 });
 
 test('fetchRequiredProducts searches every approved title before rendering', async () => {

@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { auditPage, compareAuditRuns, renderAuditReport, summarizeAudit, validateCatalogContract } from './lib/aulos-production-audit.mjs';
+import { AUDIT_ROUTES } from './audit-aulos-production-readiness.mjs';
+
+test('incluye la página GEO en las rutas obligatorias de auditoría', () => {
+  assert.ok(AUDIT_ROUTES.includes('/por-que-aulos/'));
+});
 
 test('extrae metadatos, canonical y jerarquía del contenido principal', () => {
   const html = `<!doctype html><html><head>
