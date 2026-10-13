@@ -1,6 +1,6 @@
 # Auditoría de preproducción de Aulós
 
-Fecha: 2026-10-13T19:06:43.578Z
+Fecha: 2026-10-13T19:08:42.476Z
 Entorno: `staging8.aulos.es` (lectura autenticada).
 
 ## Veredicto
@@ -31,7 +31,7 @@ La compra completa está excluida del alcance por decisión del propietario.
 | `/zine/` | 200 | Aulós Zine \| Arte, cine y pensamiento | Revista académica de Ediciones Aulós sobre arte, cine, estética, historia, ocultura y humanidades digitales. ISSN 2952-4148. | max-image-preview:large | https://staging8.aulos.es/zine/ | 1/1 | H1 Aulós Zine · H2 Cine y ocultura. Una entrevista con Carlos Cuéllar · H2 Carlos Martínez Carrasco en Onda Cero · H2 Compendio de lo oculto · H2 Melodías para los sueños y las so… |
 | `/publica-con-aulos/` | 200 | Publica tu investigación \| Ediciones Aulós | Convierte tu tesis, TFM, catálogo o proyecto de investigación en un libro cuidado, riguroso y con recorrido editorial junto a Ediciones Aulós. | max-image-preview:large | https://staging8.aulos.es/publica-con-aulos/ | 1/1 | H1 Tu investigación merece seguir viviendo en un libro. · H2 Del proyecto financiado a una obra con presencia propia. · H2 Una edición que cuida el conocimiento y amplía su alcanc… |
 | `/por-que-aulos/` | 200 | Por qué elegir Aulós \| Libros de arte y humanidades | Descubre el criterio editorial de Aulós y encuentra libros singulares de arte, estética, cine, ocultura y humanidades. | max-image-preview:large | https://staging8.aulos.es/por-que-aulos/ | 1/1 | H1 Libros que piden otra forma de leer · H2 Un catálogo que se construye por afinidades · H3 Materias conectadas · H3 Datos y contexto · H3 Voz propia · H2 Cómo elegir un libro Au… |
-| `/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/` | 200 | Leer la Luna: tarot y cine \| Ediciones Aulós | Descubre Leer la Luna, de Carlos A. Cuéllar Alejandro: un ensayo sobre el simbolismo lunar, el tarot y su presencia en la historia del cine. | max-image-preview:large | https://staging8.aulos.es/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/ | 1/1 | H1 Leer la Luna. Tarot y cine · H2 Valoraciones · H2 Productos relacionados · H3 Pack Rebeldes y Visionarios · H3 Herejía y Belleza 8 – Lo sagrado y lo profano 1 · H3 Otro Siglo d… |
+| `/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/` | 200 | Leer la Luna: tarot y cine \| Ediciones Aulós | Descubre Leer la Luna, de Carlos A. Cuéllar Alejandro: un ensayo sobre el simbolismo lunar, el tarot y su presencia en la historia del cine. | max-image-preview:large | https://staging8.aulos.es/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/ | 1/1 | H1 Leer la Luna. Tarot y cine · H2 Valoraciones · H2 Productos relacionados · H3 El Tarot de Mantegna y la sabiduría arcana del Renacimiento · H3 Herejía y Belleza 8 – Lo sagrado… |
 | `/carrito/` | 200 | Carrito - Ediciones Aulós | ¿Tienes alguna duda? Contáctanos: | noindex, max-image-preview:large | https://staging8.aulos.es/carrito/ | 1/1 | H1 Carrito · H2 ¿Tienes alguna duda? |
 | `/mi-cuenta/` | 200 | Mi cuenta - Ediciones Aulós | — | noindex, max-image-preview:large | https://staging8.aulos.es/mi-cuenta/ | 1/1 | H1 Mi cuenta · H2 Acceder · H2 Registrarse |
 | `/terminos-y-condiciones/` | 200 | Términos y condiciones \| Ediciones Aulós | Consulta las condiciones de acceso, uso y compra de libros y publicaciones en la tienda online de Ediciones Aulós. | max-image-preview:large | https://staging8.aulos.es/terminos-y-condiciones/ | 1/1 | H1 Términos y condiciones · H2 Identificación · H2 Uso del sitio · H2 Productos y pedidos · H2 Propiedad intelectual · H2 Enlaces, responsabilidad y cambios · H2 Normativa aplicab… |
@@ -41,7 +41,7 @@ La compra completa está excluida del alcance por decisión del propietario.
 
 ## Evidencia reproducible
 
-- Dos ejecuciones independientes y estables: `1791918387210-a` y `1791918387210-b`.
+- Dos ejecuciones independientes y estables: `1791918506376-a` y `1791918506376-b`.
 - Todas las rutas usaron un parámetro de cache-busting único y `Cache-Control: no-cache`.
 - Contrato verificado: `/shop/` responde 301 al mismo origen, destino exacto `/catalogo/`, conserva la query; el catálogo responde 200 y es autocanónico.
 - La CSP usa una lista explícita de orígenes y está obligatoria (`enforce`).
