@@ -51,12 +51,12 @@ test('el PHP desplegable comparte la CSP, versión y modo seguro del contrato', 
   const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
   const policy = php.match(/private const CSP = "([^"]+)";/)?.[1];
   assert.equal(policy, AULOS_CSP);
-  assert.match(php, /Version:\s*1\.1\.0/);
+  assert.match(php, /Version:\s*1\.2\.0/);
   assert.match(php, /get_option\('aulos_csp_mode', 'report-only'\)/);
 });
 
 test('define SEO editorial breve para todas las rutas indexables auditadas', () => {
-  for (const path of ['/', '/catalogo/', '/zine/', '/publica-con-aulos/', '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/', '/terminos-y-condiciones/', '/politica-de-privacidad/', '/politica-de-cookies-ue/', '/reembolso_devoluciones/']) {
+  for (const path of ['/', '/catalogo/', '/zine/', '/publica-con-aulos/', '/por-que-aulos/', '/producto/leer-la-luna-tarot-y-cine-carlos-a-cuellar-alejandro/', '/terminos-y-condiciones/', '/politica-de-privacidad/', '/politica-de-cookies-ue/', '/reembolso_devoluciones/']) {
     const meta = seoMetadata(path);
     assert.ok(meta.title, `${path} sin título`);
     assert.ok(meta.description, `${path} sin descripción`);
@@ -64,6 +64,17 @@ test('define SEO editorial breve para todas las rutas indexables auditadas', () 
     assert.ok(meta.description.length <= 160, `${path} descripción demasiado larga`);
     assert.equal(meta.robots, 'index,follow');
   }
+});
+
+test('la página GEO tiene el título y descripción aprobados también en el plugin PHP', async () => {
+  const meta = seoMetadata('/por-que-aulos/');
+  assert.deepEqual(meta, {
+    title: 'Por qué elegir Aulós | Libros de arte y humanidades',
+    description: 'Descubre el criterio editorial de Aulós y encuentra libros singulares de arte, estética, cine, ocultura y humanidades.',
+    robots: 'index,follow',
+  });
+  const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
+  assert.match(php, /'\/por-que-aulos\/'\s*=>\s*\['title'\s*=>\s*'Por qué elegir Aulós \| Libros de arte y humanidades'/);
 });
 
 test('marca páginas transaccionales como noindex,follow y no altera otras rutas', () => {
@@ -82,6 +93,11 @@ test('el PHP registra filtros AIOSEO y una opción REST de promoción CSP', asyn
 test('el comando verify aplica las aserciones de producción antes de informar éxito', async () => {
   const publisher = await readFile(new URL('../../../scripts/publish-aulos-production-readiness.mjs', import.meta.url), 'utf8');
   assert.match(publisher, /mode === '--verify'[\s\S]*assertVerification\(result, 'enforce'\)[\s\S]*console\.log/);
+});
+
+test('el publicador verifica la sustitución esperada a la versión 1.2.0', async () => {
+  const publisher = await readFile(new URL('../../../scripts/publish-aulos-production-readiness.mjs', import.meta.url), 'utf8');
+  assert.match(publisher, /after\.version !== '1\.2\.0'/);
 });
 
 test('inventaría solo orígenes externos usados por recursos o formularios', () => {
