@@ -95,6 +95,9 @@ test('renderAulosGeoPage renders the approved content with internal product rout
   assert.match(html, /#F5F2EC/i);
   assert.match(html, /#6D1F2C/i);
   assert.match(html, /font-family:[^;]*Georgia/i);
+  assert.match(html, /\.aulos-geo__hero :is\(h1,\.aulos-geo__intro\)\{color:var\(--aulos-paper\)!important\}/);
+  assert.match(html, /\.aulos-geo__route,.aulos-geo__route:visited\{[^}]*color:var\(--aulos-paper\)!important/s);
+  assert.match(html, /\.aulos-geo__cta,.aulos-geo__cta:visited\{[^}]*color:var\(--aulos-paper\)!important/s);
   for (const product of selected) {
     assert.ok(html.includes(product.permalink));
   }
