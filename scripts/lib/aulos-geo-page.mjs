@@ -5,6 +5,24 @@ export const REQUIRED_PRODUCT_TITLES = [
   'La conquista de Portugal. Historia e iconografía',
 ];
 
+const PRODUCT_TITLE_ALIASES = new Map([
+  ['La vanguardia prerrafaelista', ['vanguardia']],
+  ['Leer la Luna. Tarot y cine', ['luna']],
+  ['Patrimonio Digital', ['patrimonio']],
+  ['La conquista de Portugal. Historia e iconografía', ['La conquista de Portugal']],
+]);
+
+const PRODUCT_SEARCH_TERMS = new Map([
+  ['La vanguardia prerrafaelista', 'vanguardia'],
+  ['Leer la Luna. Tarot y cine', 'luna'],
+  ['Patrimonio Digital', 'patrimonio'],
+  ['La conquista de Portugal. Historia e iconografía', 'conquista'],
+]);
+
+export function productSearchTitle(title) {
+  return PRODUCT_SEARCH_TERMS.get(title) ?? title;
+}
+
 function normalizeTitle(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -31,13 +49,14 @@ export function selectRequiredProducts(products) {
   const available = new Map();
   for (const product of products ?? []) {
     const title = normalizeTitle(product.name);
-    if (title && product.status === 'publish' && isInternalAulosProduct(product)) {
+    if (title && (product.status ?? 'publish') === 'publish' && isInternalAulosProduct(product)) {
       available.set(title.toLocaleLowerCase('es'), product);
     }
   }
 
   return REQUIRED_PRODUCT_TITLES.map((title) => {
-    const product = available.get(title.toLocaleLowerCase('es'));
+    const product = available.get(title.toLocaleLowerCase('es'))
+      ?? (PRODUCT_TITLE_ALIASES.get(title) ?? []).map((alias) => available.get(alias.toLocaleLowerCase('es'))).find(Boolean);
     if (!product) throw new Error(`No se encontró la edición publicada requerida: ${title}.`);
     return { ...product, name: title };
   });
