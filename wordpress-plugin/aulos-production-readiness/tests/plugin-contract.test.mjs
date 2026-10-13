@@ -51,7 +51,7 @@ test('el PHP desplegable comparte la CSP, versión y modo seguro del contrato', 
   const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
   const policy = php.match(/private const CSP = "([^"]+)";/)?.[1];
   assert.equal(policy, AULOS_CSP);
-  assert.match(php, /Version:\s*1\.2\.0/);
+  assert.match(php, /Version:\s*1\.2\.1/);
   assert.match(php, /get_option\('aulos_csp_mode', 'report-only'\)/);
 });
 
@@ -77,6 +77,13 @@ test('la página GEO tiene el título y descripción aprobados también en el pl
   assert.match(php, /'\/por-que-aulos\/'\s*=>\s*\['title'\s*=>\s*'Por qué elegir Aulós \| Libros de arte y humanidades'/);
 });
 
+test('el filtro de robots hace index,follow explícito para la página GEO', async () => {
+  const php = await readFile(new URL('../aulos-production-readiness.php', import.meta.url), 'utf8');
+  assert.match(php, /current_path\(\) === '\/por-que-aulos\/'/);
+  assert.match(php, /\$attributes\['index'\] = 'index';/);
+  assert.match(php, /\$attributes\['follow'\] = 'follow';/);
+});
+
 test('marca páginas transaccionales como noindex,follow y no altera otras rutas', () => {
   assert.equal(seoMetadata('/carrito/').robots, 'noindex,follow');
   assert.equal(seoMetadata('/mi-cuenta/').robots, 'noindex,follow');
@@ -95,9 +102,9 @@ test('el comando verify aplica las aserciones de producción antes de informar �
   assert.match(publisher, /mode === '--verify'[\s\S]*assertVerification\(result, 'enforce'\)[\s\S]*console\.log/);
 });
 
-test('el publicador verifica la sustitución esperada a la versión 1.2.0', async () => {
+test('el publicador verifica la sustitución esperada a la versión 1.2.1', async () => {
   const publisher = await readFile(new URL('../../../scripts/publish-aulos-production-readiness.mjs', import.meta.url), 'utf8');
-  assert.match(publisher, /after\.version !== '1\.2\.0'/);
+  assert.match(publisher, /after\.version !== '1\.2\.1'/);
 });
 
 test('inventaría solo orígenes externos usados por recursos o formularios', () => {

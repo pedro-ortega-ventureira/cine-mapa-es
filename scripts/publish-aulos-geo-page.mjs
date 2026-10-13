@@ -20,6 +20,12 @@ export function assertRemoteUnchanged(expectedHash, actualHash) {
   if (expectedHash !== actualHash) throw new Error('El documento remoto cambió después de recuperarlo; se cancela la publicación.');
 }
 
+export function assertGeoVerification(result) {
+  if (result.status !== 200 || !result.hasPage) throw new Error('La página GEO no responde correctamente.');
+  if (result.headingCount !== 1) throw new Error('La página GEO debe contener exactamente un H1.');
+  if (result.links.some((link) => link.status !== 200)) throw new Error('Un enlace de producto de la página GEO no responde 200.');
+}
+
 export function buildGeoElementorActions(html) {
   return {
     save_builder: {
@@ -151,7 +157,11 @@ export async function executePublicationMode(mode, client) {
   const products = await client.products();
   const page = await client.page();
   if (mode === '--inspect') return { targetSlug: PAGE_SLUG, pageId: page?.id ?? null, products: products.map(({ name, permalink }) => ({ name, permalink })), writes: 0 };
-  if (mode === '--verify') return client.verify(products);
+  if (mode === '--verify') {
+    const result = await client.verify(products);
+    assertGeoVerification(result);
+    return result;
+  }
   if (mode !== '--apply') throw new Error('Modo inválido. Usa --inspect, --apply o --verify.');
   const target = page ?? await client.createPage();
   const current = await client.document(target.id);

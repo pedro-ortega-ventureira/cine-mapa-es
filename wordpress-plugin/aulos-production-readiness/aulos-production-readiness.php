@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aulós Production Readiness
  * Description: Redirección canónica del catálogo y cabeceras HTTP de seguridad para Aulós.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Ediciones Aulós
  * Requires PHP: 7.4
  */
@@ -73,6 +73,11 @@ final class Aulos_Production_Readiness
 
     public static function seo_robots(array $attributes): array
     {
+        if (self::current_path() === '/por-que-aulos/') {
+            $attributes['index'] = 'index';
+            $attributes['follow'] = 'follow';
+            unset($attributes['noindex'], $attributes['nofollow']);
+        }
         if (in_array(self::current_path(), ['/carrito/', '/mi-cuenta/'], true)) {
             $attributes['noindex'] = 'noindex';
             unset($attributes['nofollow']);

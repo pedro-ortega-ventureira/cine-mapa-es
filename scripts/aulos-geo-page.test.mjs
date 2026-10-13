@@ -8,6 +8,7 @@ import {
   selectRequiredProducts,
 } from './lib/aulos-geo-page.mjs';
 import {
+  assertGeoVerification,
   assertRemoteUnchanged,
   buildGeoElementorActions,
   fetchRequiredProducts,
@@ -72,6 +73,13 @@ test('selectRequiredProducts accepts WooCommerce Store API products without an e
   assert.equal(selected.length, 4);
 });
 
+test('selectRequiredProducts rejects a renamed approved edition', () => {
+  assert.throws(
+    () => selectRequiredProducts([{ ...products[0], name: 'vanguardia' }, ...products.slice(1)]),
+    /La vanguardia prerrafaelista/,
+  );
+});
+
 test('renderAulosGeoPage renders the approved content with internal product routes', () => {
   const selected = selectRequiredProducts(products);
   const html = renderAulosGeoPage(selected);
@@ -96,6 +104,13 @@ test('publisher refuses production URLs and protects changed Elementor documents
   assert.throws(() => validateStagingUrl('https://aulos.es/'), /staging8\.aulos\.es/);
   assert.equal(validateStagingUrl('https://staging8.aulos.es/').hostname, 'staging8.aulos.es');
   assert.throws(() => assertRemoteUnchanged('before', 'after'), /documento remoto cambió/i);
+});
+
+test('assertGeoVerification rejects broken pages, extra H1s, and product failures', () => {
+  const valid = { status: 200, headingCount: 1, hasPage: true, links: products.map((product) => ({ url: product.permalink, status: 200 })) };
+  assert.doesNotThrow(() => assertGeoVerification(valid));
+  assert.throws(() => assertGeoVerification({ ...valid, headingCount: 2 }), /H1/);
+  assert.throws(() => assertGeoVerification({ ...valid, links: [{ url: products[0].permalink, status: 404 }] }), /enlace/);
 });
 
 test('publisher saves one full-width Elementor HTML document', () => {

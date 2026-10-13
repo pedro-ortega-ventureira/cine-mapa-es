@@ -6,9 +6,6 @@ export const REQUIRED_PRODUCT_TITLES = [
 ];
 
 const PRODUCT_TITLE_ALIASES = new Map([
-  ['La vanguardia prerrafaelista', ['vanguardia']],
-  ['Leer la Luna. Tarot y cine', ['luna']],
-  ['Patrimonio Digital', ['patrimonio']],
   ['La conquista de Portugal. Historia e iconografía', ['La conquista de Portugal']],
 ]);
 
