@@ -14,6 +14,7 @@ export const contactMessageInputSchema = z
 
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 
+export const CONTACT_UNAVAILABLE_MESSAGE = "Este profesional no puede recibir mensajes";
 export const professionalContactEmailSchema = z.string().trim().toLowerCase().email().max(254);
 
 export interface ContactEmailConfig {

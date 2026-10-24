@@ -1,5 +1,6 @@
 import {
   buildContactEmail,
+  CONTACT_UNAVAILABLE_MESSAGE,
   contactIdempotencyKey,
   normalizeContactInput,
   professionalContactEmailSchema,
@@ -84,7 +85,7 @@ export async function deliverContactMessage(
   }
   const recipient = professionalContactEmailSchema.safeParse(professional.email ?? "");
   if (!recipient.success) {
-    throw new Error("Este profesional no puede recibir mensajes");
+    throw new Error(CONTACT_UNAVAILABLE_MESSAGE);
   }
 
   const candidate: StoredContact = {

@@ -260,4 +260,57 @@ describe("sendContactMessage", () => {
     ).resolves.toEqual({ ok: true, contactId: requestId, emailId: null });
     expect(createDeps).not.toHaveBeenCalled();
   });
+
+  it("expone el mensaje seguro cuando el profesional no tiene correo", async () => {
+    const createDeps = vi.fn(async () => ({
+      repository: {
+        getProfessional: vi.fn(async () => ({
+          id: professionalId,
+          fullName: "Iñigo",
+          email: null,
+          verified: true,
+        })),
+        reserve: vi.fn(),
+        markDelivered: vi.fn(),
+      },
+      emailSender: { send: vi.fn() },
+      emailConfig: { from: technicalFrom },
+    }));
+
+    await expect(
+      handleContactMessage(
+        {
+          request_id: requestId,
+          professional_id: professionalId,
+          sender_name: "Pedro",
+          sender_email: "pedro@example.org",
+          subject: "Consulta",
+          message: "Hola",
+          website: "",
+        },
+        createDeps,
+      ),
+    ).rejects.toThrow("Este profesional no puede recibir mensajes");
+  });
+
+  it("oculta los detalles de errores técnicos", async () => {
+    const createDeps = vi.fn(async () => {
+      throw new Error("secreto de infraestructura");
+    });
+
+    await expect(
+      handleContactMessage(
+        {
+          request_id: requestId,
+          professional_id: professionalId,
+          sender_name: "Pedro",
+          sender_email: "pedro@example.org",
+          subject: "Consulta",
+          message: "Hola",
+          website: "",
+        },
+        createDeps,
+      ),
+    ).rejects.toThrow("No se pudo enviar el mensaje");
+  });
 });
