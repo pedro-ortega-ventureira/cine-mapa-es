@@ -92,12 +92,11 @@ function fakeDatabase(...results: unknown[]) {
 }
 
 describe("readContactEmailConfig", () => {
-  it.each(["RESEND_API_KEY", "CONTACT_EMAIL_TO", "CONTACT_EMAIL_FROM"])(
+  it.each(["RESEND_API_KEY", "CONTACT_EMAIL_FROM"])(
     "explica qué variable falta: %s",
     (missing) => {
       const env: Record<string, string | undefined> = {
         RESEND_API_KEY: "re_test_123",
-        CONTACT_EMAIL_TO: technicalTo,
         CONTACT_EMAIL_FROM: technicalFrom,
       };
       delete env[missing];
@@ -106,16 +105,15 @@ describe("readContactEmailConfig", () => {
     },
   );
 
-  it("acepta las direcciones técnicas punycode", () => {
+  it("no requiere un destinatario técnico fijo", () => {
     expect(
       readContactEmailConfig({
         RESEND_API_KEY: " re_test_123 ",
-        CONTACT_EMAIL_TO: ` ${technicalTo} `,
         CONTACT_EMAIL_FROM: ` ${technicalFrom} `,
       }),
     ).toEqual({
       apiKey: "re_test_123",
-      emailConfig: { to: technicalTo, from: technicalFrom },
+      emailConfig: { from: technicalFrom },
     });
   });
 });
@@ -169,7 +167,12 @@ describe("createResendContactSender", () => {
 describe("createSupabaseContactRepository", () => {
   it("obtiene solo los datos necesarios de un profesional verificado", async () => {
     const { db, queries } = fakeDatabase({
-      data: { id: professionalId, full_name: "Iñigo Floristán Irisarri", verified: true },
+      data: {
+        id: professionalId,
+        full_name: "Iñigo Floristán Irisarri",
+        email: "inigo@example.org",
+        verified: true,
+      },
       error: null,
     });
     const repository = createSupabaseContactRepository(db);
@@ -177,11 +180,12 @@ describe("createSupabaseContactRepository", () => {
     await expect(repository.getProfessional(professionalId)).resolves.toEqual({
       id: professionalId,
       fullName: "Iñigo Floristán Irisarri",
+      email: "inigo@example.org",
       verified: true,
     });
     expect(queries[0].calls).toEqual([
       ["from", "professionals"],
-      ["select", "id,full_name,verified"],
+      ["select", "id,full_name,verified,email"],
       ["eq", "id", professionalId],
       ["maybeSingle"],
     ]);

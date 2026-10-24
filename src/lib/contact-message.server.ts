@@ -40,7 +40,6 @@ export function readContactEmailConfig(env: ContactEnvironment = process.env): C
   return {
     apiKey: requiredEnvironmentValue(env, "RESEND_API_KEY"),
     emailConfig: {
-      to: requiredEnvironmentValue(env, "CONTACT_EMAIL_TO"),
       from: requiredEnvironmentValue(env, "CONTACT_EMAIL_FROM"),
     },
   };
@@ -55,12 +54,22 @@ export function createSupabaseContactRepository(db: ContactDatabase): ContactRep
     async getProfessional(professionalId): Promise<ContactProfessional | null> {
       const result = (await db
         .from("professionals")
-        .select("id,full_name,verified")
+        .select("id,full_name,verified,email")
         .eq("id", professionalId)
-        .maybeSingle()) as QueryResult<{ id: string; full_name: string; verified: boolean }>;
+        .maybeSingle()) as QueryResult<{
+        id: string;
+        full_name: string;
+        verified: boolean;
+        email: string | null;
+      }>;
       throwDatabaseError(result.error);
       return result.data
-        ? { id: result.data.id, fullName: result.data.full_name, verified: result.data.verified }
+        ? {
+            id: result.data.id,
+            fullName: result.data.full_name,
+            email: result.data.email,
+            verified: result.data.verified,
+          }
         : null;
     },
 
