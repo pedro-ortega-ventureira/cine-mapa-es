@@ -3,9 +3,8 @@ import type { ContactEmailConfig, ContactEmailPayload } from "./contact-message"
 import type {
   ContactEmailSender,
   ContactProfessional,
-  ContactRecord,
   ContactRepository,
-  ContactSaveStatus,
+  ContactReservation,
 } from "./contact-message-service";
 
 type ContactEnvironment = Record<string, string | undefined>;
@@ -19,6 +18,7 @@ type QueryResult<T> = { data: T | null; error: { code?: string; message: string 
 
 interface ContactDatabase {
   from(table: "professionals" | "contact_messages"): any;
+  rpc(name: "reserve_contact_message", args: Record<string, unknown>): Promise<QueryResult<unknown>>;
 }
 
 interface ResendClient {
@@ -50,17 +50,6 @@ function throwDatabaseError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
 }
 
-function matchesRecord(left: ContactRecord, right: ContactRecord): boolean {
-  return (
-    left.request_id === right.request_id &&
-    left.professional_id === right.professional_id &&
-    left.sender_name === right.sender_name &&
-    left.sender_email === right.sender_email &&
-    left.subject === right.subject &&
-    left.message === right.message
-  );
-}
-
 export function createSupabaseContactRepository(db: ContactDatabase): ContactRepository {
   return {
     async getProfessional(professionalId): Promise<ContactProfessional | null> {
@@ -75,56 +64,31 @@ export function createSupabaseContactRepository(db: ContactDatabase): ContactRep
         : null;
     },
 
-    async getById(requestId): Promise<ContactRecord | null> {
-      const result = (await db
-        .from("contact_messages")
-        .select("id,professional_id,sender_name,sender_email,subject,message")
-        .eq("id", requestId)
-        .maybeSingle()) as QueryResult<{
-        id: string;
-        professional_id: string;
-        sender_name: string;
-        sender_email: string;
-        subject: string | null;
-        message: string;
-      }>;
-      throwDatabaseError(result.error);
-      return result.data
-        ? {
-            request_id: result.data.id,
-            professional_id: result.data.professional_id,
-            sender_name: result.data.sender_name,
-            sender_email: result.data.sender_email,
-            subject: result.data.subject ?? "",
-            message: result.data.message,
-          }
-        : null;
-    },
-
-    async countRecentByEmail(senderEmail, since): Promise<number> {
-      const result = (await db
-        .from("contact_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("sender_email", senderEmail)
-        .gte("created_at", since.toISOString())) as QueryResult<null> & { count?: number | null };
-      throwDatabaseError(result.error);
-      return result.count ?? 0;
-    },
-
-    async save(contact): Promise<ContactSaveStatus> {
-      const insert = await db.from("contact_messages").insert({
-        id: contact.request_id,
-        professional_id: contact.professional_id,
-        sender_name: contact.sender_name,
-        sender_email: contact.sender_email,
-        subject: contact.subject,
-        message: contact.message,
+    async reserve(contact, since): Promise<ContactReservation> {
+      const result = await db.rpc("reserve_contact_message", {
+        p_id: contact.request_id,
+        p_professional_id: contact.professional_id,
+        p_sender_name: contact.sender_name,
+        p_sender_email: contact.sender_email,
+        p_subject: contact.subject,
+        p_message: contact.message,
+        p_created_at: contact.created_at,
+        p_email_payload: contact.email_payload,
+        p_since: since.toISOString(),
       });
-      if (!insert.error) return "new";
-      if (insert.error.code !== "23505") throwDatabaseError(insert.error);
+      throwDatabaseError(result.error);
+      if (!result.data || typeof result.data !== "object") {
+        throw new Error("Supabase did not return a contact reservation");
+      }
+      return result.data as ContactReservation;
+    },
 
-      const existing = await this.getById(contact.request_id);
-      return existing && matchesRecord(existing, contact) ? "duplicate_same" : "conflict";
+    async markDelivered(requestId, emailId, acceptedAt): Promise<void> {
+      const result = await db
+        .from("contact_messages")
+        .update({ email_id: emailId, email_accepted_at: acceptedAt.toISOString() })
+        .eq("id", requestId);
+      throwDatabaseError(result.error);
     },
   };
 }

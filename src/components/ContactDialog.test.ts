@@ -104,4 +104,28 @@ describe("ContactDialog", () => {
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(3));
     expect(submit.mock.calls[2][0].data.request_id).toBe(nextRequestId);
   });
+
+  it("bloquea la edición del reintento y permite descartarlo para empezar otro", async () => {
+    const nextRequestId = "4b6f2c3-4c4e-4d8c-b866-b3356611a662";
+    vi.spyOn(globalThis.crypto, "randomUUID")
+      .mockReturnValueOnce(requestId)
+      .mockReturnValueOnce(nextRequestId);
+    submit
+      .mockRejectedValueOnce(new Error("resend unavailable"))
+      .mockResolvedValueOnce({ ok: true, contactId: nextRequestId, emailId: "email_456" });
+    openDialog();
+    fillForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enviar mensaje" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect((screen.getByPlaceholderText("Tu nombre") as HTMLInputElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Descartar y empezar de nuevo" }));
+    expect((screen.getByPlaceholderText("Tu nombre") as HTMLInputElement).value).toBe("");
+    fillForm();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar mensaje" }));
+
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+    expect(submit.mock.calls[1][0].data.request_id).toBe(nextRequestId);
+  });
 });

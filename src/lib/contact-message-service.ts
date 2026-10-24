@@ -9,19 +9,33 @@ import {
 
 export type ContactRecord = Omit<ContactMessageInput, "website">;
 
+export interface StoredContact extends ContactRecord {
+  created_at: string;
+  email_payload: ContactEmailPayload;
+  email_id: string | null;
+}
+
 export interface ContactProfessional {
   id: string;
   fullName: string;
   verified: boolean;
 }
 
-export type ContactSaveStatus = "new" | "duplicate_same" | "conflict";
+export type ContactReservationStatus =
+  | "new"
+  | "duplicate_same"
+  | "conflict"
+  | "rate_limited";
+
+export interface ContactReservation {
+  status: ContactReservationStatus;
+  contact: StoredContact | null;
+}
 
 export interface ContactRepository {
   getProfessional(professionalId: string): Promise<ContactProfessional | null>;
-  getById(requestId: string): Promise<ContactRecord | null>;
-  countRecentByEmail(senderEmail: string, since: Date): Promise<number>;
-  save(contact: ContactRecord): Promise<ContactSaveStatus>;
+  reserve(contact: StoredContact, since: Date): Promise<ContactReservation>;
+  markDelivered(requestId: string, emailId: string, acceptedAt: Date): Promise<void>;
 }
 
 export interface ContactEmailSender {
@@ -52,17 +66,6 @@ function toRecord(input: ContactMessageInput): ContactRecord {
   };
 }
 
-function recordsMatch(left: ContactRecord, right: ContactRecord): boolean {
-  return (
-    left.request_id === right.request_id &&
-    left.professional_id === right.professional_id &&
-    left.sender_name === right.sender_name &&
-    left.sender_email === right.sender_email &&
-    left.subject === right.subject &&
-    left.message === right.message
-  );
-}
-
 export async function deliverContactMessage(
   rawInput: ContactMessageInput,
   deps: ContactDeliveryDeps,
@@ -78,27 +81,36 @@ export async function deliverContactMessage(
     throw new Error("El profesional no está disponible para recibir contactos");
   }
 
-  const contact = toRecord(input);
-  const existing = await deps.repository.getById(input.request_id);
-  if (existing) {
-    if (!recordsMatch(existing, contact)) {
-      throw new Error("El identificador de la solicitud ya está en uso");
-    }
-  } else {
-    const since = new Date(now.getTime() - 30 * 60 * 1_000);
-    const recentCount = await deps.repository.countRecentByEmail(input.sender_email, since);
-    if (recentCount >= 5) {
-      throw new Error("Has enviado demasiados mensajes. Inténtalo más tarde");
-    }
+  const candidate: StoredContact = {
+    ...toRecord(input),
+    created_at: now.toISOString(),
+    email_payload: buildContactEmail(input, professional.fullName, deps.emailConfig, now),
+    email_id: null,
+  };
+  const since = new Date(now.getTime() - 30 * 60 * 1_000);
+  const reservation = await deps.repository.reserve(candidate, since);
 
-    const status = await deps.repository.save(contact);
-    if (status === "conflict") {
-      throw new Error("El identificador de la solicitud ya está en uso");
-    }
+  if (reservation.status === "conflict") {
+    throw new Error("El identificador de la solicitud ya está en uso");
+  }
+  if (reservation.status === "rate_limited") {
+    throw new Error("Has enviado demasiados mensajes. Inténtalo más tarde");
+  }
+  if (!reservation.contact) {
+    throw new Error("No se pudo reservar el mensaje de contacto");
+  }
+  if (reservation.contact.email_id) {
+    return {
+      ok: true,
+      contactId: input.request_id,
+      emailId: reservation.contact.email_id,
+    };
   }
 
-  const payload = buildContactEmail(input, professional.fullName, deps.emailConfig, now);
-  const sent = await deps.emailSender.send(payload, contactIdempotencyKey(input.request_id));
-
+  const sent = await deps.emailSender.send(
+    reservation.contact.email_payload,
+    contactIdempotencyKey(input.request_id),
+  );
+  await deps.repository.markDelivered(input.request_id, sent.id, now);
   return { ok: true, contactId: input.request_id, emailId: sent.id };
 }

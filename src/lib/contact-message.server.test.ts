@@ -1,25 +1,37 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ContactEmailPayload } from "./contact-message";
-import type { ContactRecord } from "./contact-message-service";
+import type { StoredContact } from "./contact-message-service";
 import {
   createResendContactSender,
   createSupabaseContactRepository,
   readContactEmailConfig,
 } from "./contact-message.server";
-import { sendContactMessage } from "./contact-message.functions";
+import { handleContactMessage, sendContactMessage } from "./contact-message.functions";
 
 const requestId = "0f6ff2c3-4c4e-4d8c-b866-b3356611a661";
 const professionalId = "93afb8a7-0702-4db5-8d2f-a121fce08a35";
 const technicalTo = "pedro.ortega@xn--espaalatente-dhb.org";
 const technicalFrom = "Directorio audiovisual <contacto@xn--espaalatente-dhb.org>";
 
-const record: ContactRecord = {
+const emailPayload: ContactEmailPayload = {
+  from: technicalFrom,
+  to: technicalTo,
+  replyTo: "pedro@example.org",
+  subject: "Contacto",
+  text: "Mensaje",
+  html: "<p>Mensaje</p>",
+};
+
+const record: StoredContact = {
   request_id: requestId,
   professional_id: professionalId,
   sender_name: "Pedro Ortega",
   sender_email: "pedro@example.org",
   subject: "Una consulta",
   message: "Hola, quisiera contactar.",
+  created_at: "2026-10-24T05:30:00.000Z",
+  email_payload: emailPayload,
+  email_id: null,
 };
 
 class FakeQuery {
@@ -47,6 +59,11 @@ class FakeQuery {
     return this;
   }
 
+  update(...args: unknown[]) {
+    this.calls.push(["update", ...args]);
+    return this;
+  }
+
   maybeSingle() {
     this.calls.push(["maybeSingle"]);
     return Promise.resolve(this.result);
@@ -70,7 +87,8 @@ function fakeDatabase(...results: unknown[]) {
     return query;
   });
 
-  return { db: { from }, from, queries };
+  const rpc = vi.fn();
+  return { db: { from, rpc }, from, rpc, queries };
 }
 
 describe("readContactEmailConfig", () => {
@@ -169,84 +187,73 @@ describe("createSupabaseContactRepository", () => {
     ]);
   });
 
-  it("cuenta mensajes recientes por email y fecha", async () => {
+  it("reserva el contacto y aplica el límite dentro de una RPC atómica", async () => {
     const since = new Date("2026-10-24T05:00:00.000Z");
-    const { db, queries } = fakeDatabase({ data: null, count: 4, error: null });
+    const { db, rpc } = fakeDatabase();
+    rpc.mockResolvedValue({
+      data: { status: "new", contact: record },
+      error: null,
+    });
     const repository = createSupabaseContactRepository(db);
 
-    await expect(repository.countRecentByEmail("pedro@example.org", since)).resolves.toBe(4);
-    expect(queries[0].calls).toEqual([
-      ["from", "contact_messages"],
-      ["select", "id", { count: "exact", head: true }],
-      ["eq", "sender_email", "pedro@example.org"],
-      ["gte", "created_at", since.toISOString()],
-    ]);
+    await expect(repository.reserve(record, since)).resolves.toEqual({
+      status: "new",
+      contact: record,
+    });
+    expect(rpc).toHaveBeenCalledWith("reserve_contact_message", {
+      p_id: requestId,
+      p_professional_id: professionalId,
+      p_sender_name: "Pedro Ortega",
+      p_sender_email: "pedro@example.org",
+      p_subject: "Una consulta",
+      p_message: "Hola, quisiera contactar.",
+      p_created_at: "2026-10-24T05:30:00.000Z",
+      p_email_payload: emailPayload,
+      p_since: since.toISOString(),
+    });
   });
 
-  it("inserta una solicitud nueva con su UUID estable", async () => {
+  it("registra el ID de Resend y la fecha de aceptación", async () => {
+    const acceptedAt = new Date("2026-10-24T05:31:00.000Z");
     const { db, queries } = fakeDatabase({ error: null });
     const repository = createSupabaseContactRepository(db);
 
-    await expect(repository.save(record)).resolves.toBe("new");
+    await expect(repository.markDelivered(requestId, "email_123", acceptedAt)).resolves.toBeUndefined();
     expect(queries[0].calls).toEqual([
       ["from", "contact_messages"],
       [
-        "insert",
+        "update",
         {
-          id: requestId,
-          professional_id: professionalId,
-          sender_name: "Pedro Ortega",
-          sender_email: "pedro@example.org",
-          subject: "Una consulta",
-          message: "Hola, quisiera contactar.",
+          email_id: "email_123",
+          email_accepted_at: acceptedAt.toISOString(),
         },
       ],
+      ["eq", "id", requestId],
     ]);
-  });
-
-  it("clasifica una colisión idéntica como duplicado seguro", async () => {
-    const { db } = fakeDatabase(
-      { error: { code: "23505", message: "duplicate key" } },
-      {
-        data: {
-          id: requestId,
-          professional_id: professionalId,
-          sender_name: "Pedro Ortega",
-          sender_email: "pedro@example.org",
-          subject: "Una consulta",
-          message: "Hola, quisiera contactar.",
-        },
-        error: null,
-      },
-    );
-    const repository = createSupabaseContactRepository(db);
-
-    await expect(repository.save(record)).resolves.toBe("duplicate_same");
-  });
-
-  it("clasifica una colisión con contenido distinto como conflicto", async () => {
-    const { db } = fakeDatabase(
-      { error: { code: "23505", message: "duplicate key" } },
-      {
-        data: {
-          id: requestId,
-          professional_id: professionalId,
-          sender_name: "Pedro Ortega",
-          sender_email: "pedro@example.org",
-          subject: "Una consulta",
-          message: "Contenido diferente",
-        },
-        error: null,
-      },
-    );
-    const repository = createSupabaseContactRepository(db);
-
-    await expect(repository.save(record)).resolves.toBe("conflict");
   });
 });
 
 describe("sendContactMessage", () => {
   it("expone una función pública de TanStack Start", () => {
     expect(sendContactMessage).toEqual(expect.any(Function));
+  });
+
+  it("resuelve el honeypot sin construir dependencias ni leer configuración", async () => {
+    const createDeps = vi.fn();
+    await expect(
+      handleContactMessage(
+        {
+          request_id: requestId,
+          professional_id: professionalId,
+          sender_name: "Bot",
+          sender_email: "bot@example.org",
+          subject: "Spam",
+          message: "Spam",
+          website: "https://spam.example",
+        },
+        createDeps,
+      ),
+    ).resolves.toEqual({ ok: true, contactId: requestId, emailId: null });
+    expect(createDeps).not.toHaveBeenCalled();
   });
 });

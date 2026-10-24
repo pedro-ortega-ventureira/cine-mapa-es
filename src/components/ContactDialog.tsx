@@ -34,6 +34,12 @@ export function ContactDialog({
   const [form, setForm] = useState(emptyForm);
   const [requestId, setRequestId] = useState<string | null>(null);
   const sendMessage = useServerFn(sendContactMessage);
+  const retryLocked = requestId !== null;
+
+  function discardAttempt() {
+    setForm(emptyForm);
+    setRequestId(null);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,24 +82,28 @@ export function ContactDialog({
         <form onSubmit={submit} className="space-y-3">
           <Input
             required
+            disabled={loading || retryLocked}
             placeholder="Tu nombre"
             value={form.sender_name}
             onChange={(e) => setForm({ ...form, sender_name: e.target.value })}
           />
           <Input
             required
+            disabled={loading || retryLocked}
             type="email"
             placeholder="Tu email"
             value={form.sender_email}
             onChange={(e) => setForm({ ...form, sender_email: e.target.value })}
           />
           <Input
+            disabled={loading || retryLocked}
             placeholder="Asunto (opcional)"
             value={form.subject}
             onChange={(e) => setForm({ ...form, subject: e.target.value })}
           />
           <Textarea
             required
+            disabled={loading || retryLocked}
             placeholder="Mensaje"
             rows={5}
             value={form.message}
@@ -105,12 +115,18 @@ export function ContactDialog({
             className="sr-only"
             name="website"
             tabIndex={-1}
+            disabled={loading || retryLocked}
             value={form.website}
             onChange={(e) => setForm({ ...form, website: e.target.value })}
           />
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Enviando…" : "Enviar mensaje"}
           </Button>
+          {retryLocked && !loading ? (
+            <Button type="button" variant="outline" className="w-full" onClick={discardAttempt}>
+              Descartar y empezar de nuevo
+            </Button>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>
