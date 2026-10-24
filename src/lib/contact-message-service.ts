@@ -2,8 +2,8 @@ import {
   buildContactEmail,
   CONTACT_UNAVAILABLE_MESSAGE,
   contactIdempotencyKey,
+  normalizeProfessionalContactEmail,
   normalizeContactInput,
-  professionalContactEmailSchema,
   type ContactEmailConfig,
   type ContactEmailPayload,
   type ContactMessageInput,
@@ -83,8 +83,8 @@ export async function deliverContactMessage(
   if (!professional?.verified) {
     throw new Error("El profesional no está disponible para recibir contactos");
   }
-  const recipient = professionalContactEmailSchema.safeParse(professional.email ?? "");
-  if (!recipient.success) {
+  const recipient = normalizeProfessionalContactEmail(professional.email);
+  if (!recipient) {
     throw new Error(CONTACT_UNAVAILABLE_MESSAGE);
   }
 
@@ -94,7 +94,7 @@ export async function deliverContactMessage(
     email_payload: buildContactEmail(
       input,
       professional.fullName,
-      recipient.data,
+      recipient,
       deps.emailConfig,
       now,
     ),

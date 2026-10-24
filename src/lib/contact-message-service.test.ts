@@ -182,6 +182,23 @@ describe("deliverContactMessage", () => {
     },
   );
 
+  it("convierte a Punycode el dominio internacional del destinatario", async () => {
+    const { deps, repository, emailSender } = makeDeps();
+    repository.getProfessional = vi.fn(async () => ({
+      id: input.professional_id,
+      fullName: "Iñigo",
+      email: "profesional@españalatente.org",
+      verified: true,
+    }));
+    repository.reserve = vi.fn(async (candidate) => ({ status: "new", contact: candidate }));
+
+    await deliverContactMessage(input, deps);
+
+    expect((emailSender.send as ReturnType<typeof vi.fn>).mock.calls[0][0].to).toBe(
+      "profesional@xn--espaalatente-dhb.org",
+    );
+  });
+
   it("rechaza atómicamente el sexto mensaje", async () => {
     const { deps, repository, emailSender } = makeDeps();
     repository.reserve = vi.fn(async () => ({ status: "rate_limited", contact: null }));

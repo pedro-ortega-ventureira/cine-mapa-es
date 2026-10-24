@@ -15,7 +15,36 @@ export const contactMessageInputSchema = z
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 
 export const CONTACT_UNAVAILABLE_MESSAGE = "Este profesional no puede recibir mensajes";
-export const professionalContactEmailSchema = z.string().trim().toLowerCase().email().max(254);
+const professionalContactEmailSchema = z.string().email().max(254);
+
+export function normalizeProfessionalContactEmail(value: string | null): string | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  const separator = normalized.indexOf("@");
+  if (separator <= 0 || separator !== normalized.lastIndexOf("@")) return null;
+
+  const localPart = normalized.slice(0, separator);
+  const unicodeDomain = normalized.slice(separator + 1);
+  if (!unicodeDomain) return null;
+
+  try {
+    const domainUrl = new URL(`http://${unicodeDomain}`);
+    if (
+      domainUrl.username ||
+      domainUrl.password ||
+      domainUrl.port ||
+      domainUrl.pathname !== "/" ||
+      domainUrl.search ||
+      domainUrl.hash
+    ) {
+      return null;
+    }
+    const candidate = `${localPart}@${domainUrl.hostname}`;
+    const parsed = professionalContactEmailSchema.safeParse(candidate);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface ContactEmailConfig {
   from: string;
