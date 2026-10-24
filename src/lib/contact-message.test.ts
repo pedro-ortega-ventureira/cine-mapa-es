@@ -46,7 +46,6 @@ describe("contactMessageInputSchema", () => {
 
 describe("composición del correo de contacto", () => {
   const config = {
-    to: "pedro.ortega@xn--espaalatente-dhb.org",
     from: "Directorio audiovisual <contacto@xn--espaalatente-dhb.org>",
   };
 
@@ -55,13 +54,14 @@ describe("composición del correo de contacto", () => {
     const email = buildContactEmail(
       input,
       "Iñigo Floristán Irisarri",
+      "inigo@example.org",
       config,
       new Date("2026-10-24T05:10:00.000Z"),
     );
 
     expect(email).toMatchObject({
       from: config.from,
-      to: config.to,
+      to: "inigo@example.org",
       replyTo: "pedro@example.org",
       subject: "[Directorio] Contacto para Iñigo Floristán Irisarri: Sin asunto",
     });
@@ -79,7 +79,13 @@ describe("composición del correo de contacto", () => {
       subject: "Consulta\r\nBcc: atacante@example.org",
       message: "Hola <script>alert('mensaje')</script> & adiós",
     });
-    const email = buildContactEmail(input, "Profesional <principal>", config, new Date(0));
+    const email = buildContactEmail(
+      input,
+      "Profesional <principal>",
+      "profesional@example.org",
+      config,
+      new Date(0),
+    );
 
     expect(email.subject).not.toMatch(/[\r\n]/);
     expect(email.subject).toContain("Consulta Bcc: atacante@example.org");

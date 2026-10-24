@@ -19,13 +19,14 @@ const input: ContactMessageInput = {
 };
 
 const emailConfig = {
-  to: "pedro.ortega@xn--espaalatente-dhb.org",
   from: "Directorio audiovisual <contacto@xn--espaalatente-dhb.org>",
 };
+const professionalEmail = "inigo@example.org";
 
 function stored(overrides: Partial<StoredContact> = {}): StoredContact {
   const emailPayload: ContactEmailPayload = {
-    ...emailConfig,
+    from: emailConfig.from,
+    to: professionalEmail,
     replyTo: input.sender_email,
     subject: "[Directorio] Contacto para Iñigo: Una consulta",
     text: "Fecha: 2026-10-24T05:30:00.000Z",
@@ -51,6 +52,7 @@ function makeDeps(status: "new" | "duplicate_same" = "new") {
     getProfessional: vi.fn(async () => ({
       id: input.professional_id,
       fullName: "Iñigo Floristán Irisarri",
+      email: professionalEmail,
       verified: true,
     })),
     reserve: vi.fn(async () => ({ status, contact })),
@@ -74,11 +76,17 @@ describe("deliverContactMessage", () => {
     const order: string[] = [];
     repository.getProfessional = vi.fn(async () => {
       order.push("professional");
-      return { id: input.professional_id, fullName: "Iñigo", verified: true };
+      return {
+        id: input.professional_id,
+        fullName: "Iñigo",
+        email: `  ${professionalEmail.toUpperCase()}  `,
+        verified: true,
+      };
     });
     repository.reserve = vi.fn(async (candidate, since) => {
       order.push("reserve");
       expect(candidate.email_payload.text).toContain("2026-10-24T05:30:00.000Z");
+      expect(candidate.email_payload.to).toBe(professionalEmail);
       expect(since).toEqual(new Date("2026-10-24T05:00:00.000Z"));
       return { status: "new", contact: candidate };
     });
@@ -106,6 +114,12 @@ describe("deliverContactMessage", () => {
   it("reutiliza byte por byte el payload persistido aunque cambie el reloj", async () => {
     const { deps, repository, emailSender, contact } = makeDeps("duplicate_same");
     deps.now = () => new Date("2026-10-25T10:00:00.000Z");
+    repository.getProfessional = vi.fn(async () => ({
+      id: input.professional_id,
+      fullName: "Iñigo",
+      email: "nuevo@example.org",
+      verified: true,
+    }));
 
     await deliverContactMessage(input, deps);
 
@@ -115,6 +129,9 @@ describe("deliverContactMessage", () => {
     );
     expect((emailSender.send as ReturnType<typeof vi.fn>).mock.calls[0][0].text).not.toContain(
       "2026-10-25",
+    );
+    expect((emailSender.send as ReturnType<typeof vi.fn>).mock.calls[0][0].to).toBe(
+      professionalEmail,
     );
   });
 
@@ -132,12 +149,34 @@ describe("deliverContactMessage", () => {
     expect(repository.markDelivered).not.toHaveBeenCalled();
   });
 
-  it.each([null, { id: input.professional_id, fullName: "Iñigo", verified: false }])(
+  it.each([
+    null,
+    { id: input.professional_id, fullName: "Iñigo", email: professionalEmail, verified: false },
+  ])(
     "rechaza un profesional inexistente o no verificado",
     async (professional) => {
       const { deps, repository, emailSender } = makeDeps();
       repository.getProfessional = vi.fn(async () => professional);
       await expect(deliverContactMessage(input, deps)).rejects.toThrow(/profesional/i);
+      expect(repository.reserve).not.toHaveBeenCalled();
+      expect(emailSender.send).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([null, "", "   ", "correo-invalido"])(
+    "rechaza un profesional sin correo utilizable: %s",
+    async (email) => {
+      const { deps, repository, emailSender } = makeDeps();
+      repository.getProfessional = vi.fn(async () => ({
+        id: input.professional_id,
+        fullName: "Iñigo",
+        email,
+        verified: true,
+      }));
+
+      await expect(deliverContactMessage(input, deps)).rejects.toThrow(
+        "Este profesional no puede recibir mensajes",
+      );
       expect(repository.reserve).not.toHaveBeenCalled();
       expect(emailSender.send).not.toHaveBeenCalled();
     },

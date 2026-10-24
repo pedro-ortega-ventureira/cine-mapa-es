@@ -14,12 +14,14 @@ export const contactMessageInputSchema = z
 
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 
+export const professionalContactEmailSchema = z.string().trim().toLowerCase().email().max(254);
+
 export interface ContactEmailConfig {
-  to: string;
   from: string;
 }
 
 export interface ContactEmailPayload extends ContactEmailConfig {
+  to: string;
   replyTo: string;
   subject: string;
   text: string;
@@ -54,6 +56,7 @@ function escapeHtml(value: string): string {
 export function buildContactEmail(
   rawInput: ContactMessageInput,
   professionalName: string,
+  recipientEmail: string,
   config: ContactEmailConfig,
   submittedAt: Date,
 ): ContactEmailPayload {
@@ -84,7 +87,7 @@ export function buildContactEmail(
 
   return {
     from: config.from,
-    to: config.to,
+    to: recipientEmail,
     replyTo: input.sender_email,
     subject: `[Directorio] Contacto para ${safeProfessionalName}: ${safeSubject}`,
     text,
