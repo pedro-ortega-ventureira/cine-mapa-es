@@ -78,4 +78,3 @@ Los mensajes enviados desde una ficha profesional deben conservarse en Supabase 
 - Preview de Vercel con variables separadas.
 - Prueba real desde la ficha de Iñigo: fila creada una sola vez, API de Resend aceptada, correo visible en el panel de Resend y recibido en `pedro.ortega@españalatente.org` con `Reply-To` correcto.
 - Solo después de esa verificación se desplegará el mismo cambio a producción.
-
