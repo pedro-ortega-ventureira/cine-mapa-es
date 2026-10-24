@@ -17,6 +17,9 @@ export type Database = {
       contact_messages: {
         Row: {
           created_at: string
+          email_accepted_at: string | null
+          email_id: string | null
+          email_payload: Json | null
           id: string
           message: string
           professional_id: string
@@ -27,6 +30,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_accepted_at?: string | null
+          email_id?: string | null
+          email_payload?: Json | null
           id?: string
           message: string
           professional_id: string
@@ -37,6 +43,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_accepted_at?: string | null
+          email_id?: string | null
+          email_payload?: Json | null
           id?: string
           message?: string
           professional_id?: string
@@ -407,6 +416,20 @@ export type Database = {
       reorder_featured_filmography: {
         Args: { _item_ids: string[]; _professional_id: string }
         Returns: undefined
+      }
+      reserve_contact_message: {
+        Args: {
+          p_created_at: string
+          p_email_payload: Json
+          p_id: string
+          p_message: string
+          p_professional_id: string
+          p_sender_email: string
+          p_sender_name: string
+          p_since: string
+          p_subject: string
+        }
+        Returns: Json
       }
       seed_municipalities_batch: { Args: { _payload: Json }; Returns: number }
       seed_postal_codes_batch: { Args: { _payload: Json }; Returns: number }
