@@ -137,6 +137,11 @@
     border-color: var(--color-border);
   }
 
+  /* Keep Leaflet's high internal z-indexes inside each map. */
+  .leaflet-container {
+    isolation: isolate;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
