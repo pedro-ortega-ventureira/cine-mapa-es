@@ -179,7 +179,13 @@ function RootComponent() {
           <Outlet />
         </main>
         <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-          Directorio audiovisual del medio rural · Fundación España Latente
+          <p>Directorio audiovisual del medio rural · Fundación Lydia Cacho</p>
+          <nav aria-label="Información legal" className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+            <Link to="/aviso-legal" className="hover:text-foreground underline-offset-2 hover:underline">Aviso legal</Link>
+            <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">Privacidad</Link>
+            <Link to="/cookies" className="hover:text-foreground underline-offset-2 hover:underline">Cookies</Link>
+            <Link to="/directorio" className="hover:text-foreground underline-offset-2 hover:underline">Contacto</Link>
+          </nav>
         </footer>
       </div>
       <Toaster richColors position="top-right" />

@@ -12,8 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AvisoLegalRouteImport } from './routes/aviso-legal'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as MapaRouteImport } from './routes/mapa'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as MunicipiosCodigoRouteImport } from './routes/municipios.$codigo'
@@ -40,6 +43,16 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisoLegalRoute = AvisoLegalRouteImport.update({
+  id: '/aviso-legal',
+  path: '/aviso-legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DirectorioRoute = DirectorioRouteImport.update({
   id: '/directorio',
   path: '/directorio',
@@ -48,6 +61,11 @@ const DirectorioRoute = DirectorioRouteImport.update({
 const MapaRoute = MapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegistroRoute = RegistroRouteImport.update({
@@ -114,8 +132,11 @@ const ApiTmdbSplatRoute = ApiTmdbSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/aviso-legal': typeof AvisoLegalRoute
+  '/cookies': typeof CookiesRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
@@ -131,8 +152,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/aviso-legal': typeof AvisoLegalRoute
+  '/cookies': typeof CookiesRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
   '/profesionales/$slug': typeof ProfesionalesSlugRoute
@@ -149,8 +173,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/aviso-legal': typeof AvisoLegalRoute
+  '/cookies': typeof CookiesRoute
   '/directorio': typeof DirectorioRoute
   '/mapa': typeof MapaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/municipios/$codigo': typeof MunicipiosCodigoRoute
@@ -168,8 +195,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/aviso-legal'
+    | '/cookies'
     | '/directorio'
     | '/mapa'
+    | '/privacidad'
     | '/registro'
     | '/admin'
     | '/municipios/$codigo'
@@ -185,8 +215,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/aviso-legal'
+    | '/cookies'
     | '/directorio'
     | '/mapa'
+    | '/privacidad'
     | '/registro'
     | '/municipios/$codigo'
     | '/profesionales/$slug'
@@ -202,8 +235,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/aviso-legal'
+    | '/cookies'
     | '/directorio'
     | '/mapa'
+    | '/privacidad'
     | '/registro'
     | '/_authenticated/admin'
     | '/municipios/$codigo'
@@ -221,8 +257,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  AvisoLegalRoute: typeof AvisoLegalRoute
+  CookiesRoute: typeof CookiesRoute
   DirectorioRoute: typeof DirectorioRoute
   MapaRoute: typeof MapaRoute
+  PrivacidadRoute: typeof PrivacidadRoute
   RegistroRoute: typeof RegistroRoute
   MunicipiosCodigoRoute: typeof MunicipiosCodigoRoute
   ProfesionalesSlugRoute: typeof ProfesionalesSlugRoute
@@ -254,6 +293,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aviso-legal': {
+      id: '/aviso-legal'
+      path: '/aviso-legal'
+      fullPath: '/aviso-legal'
+      preLoaderRoute: typeof AvisoLegalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/directorio': {
       id: '/directorio'
       path: '/directorio'
@@ -266,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/mapa'
       fullPath: '/mapa'
       preLoaderRoute: typeof MapaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/registro': {
@@ -380,8 +440,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  AvisoLegalRoute: AvisoLegalRoute,
+  CookiesRoute: CookiesRoute,
   DirectorioRoute: DirectorioRoute,
   MapaRoute: MapaRoute,
+  PrivacidadRoute: PrivacidadRoute,
   RegistroRoute: RegistroRoute,
   MunicipiosCodigoRoute: MunicipiosCodigoRoute,
   ProfesionalesSlugRoute: ProfesionalesSlugRoute,
