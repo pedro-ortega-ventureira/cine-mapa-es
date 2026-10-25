@@ -7,6 +7,25 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  nitro: {
+    routeRules: {
+      "/**": {
+        headers: {
+          "x-content-type-options": "nosniff",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "x-frame-options": "SAMEORIGIN",
+        },
+      },
+    },
+  },
+  vite: {
+    test: {
+      // Los contratos de plugins usan el runner nativo de Node (`node --test`).
+      // Vitest solo debe descubrir las pruebas de la aplicación React/TypeScript.
+      include: ["src/**/*.test.ts"],
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
