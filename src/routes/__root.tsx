@@ -10,7 +10,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -19,6 +18,7 @@ import {
 } from "@/integrations/supabase/public-config";
 import { Toaster } from "@/components/ui/sonner";
 import { authLinkDestination, INITIAL_AUTH_LINK_TYPE } from "@/lib/auth-hash";
+import { canonicalUrl } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -45,9 +45,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -97,6 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: canonicalUrl("/") },
       { name: "twitter:title", content: "Directorio audiovisual del medio rural — España" },
       {
         name: "twitter:description",
