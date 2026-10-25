@@ -21,6 +21,7 @@ import { validateAuthSearch } from "@/lib/auth-search";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" }] }),
   validateSearch: validateAuthSearch,
   beforeLoad: async ({ search }) => {
     // Al volver desde el enlace del email hay sesión de recuperación o de
