@@ -105,6 +105,19 @@ describe("ContactDialog", () => {
     expect(submit.mock.calls[2][0].data.request_id).toBe(nextRequestId);
   });
 
+  it("indica cuando el profesional no puede recibir mensajes", async () => {
+    vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(requestId);
+    submit.mockRejectedValue(new Error("Este profesional no puede recibir mensajes"));
+    openDialog();
+    fillForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enviar mensaje" }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Este profesional no puede recibir mensajes"),
+    );
+  });
+
   it("bloquea la edición del reintento y permite descartarlo para empezar otro", async () => {
     const nextRequestId = "4b6f2c3-4c4e-4d8c-b866-b3356611a662";
     vi.spyOn(globalThis.crypto, "randomUUID")

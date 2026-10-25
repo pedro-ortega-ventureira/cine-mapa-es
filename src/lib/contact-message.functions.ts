@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { contactMessageInputSchema, type ContactMessageInput } from "./contact-message";
+import {
+  CONTACT_UNAVAILABLE_MESSAGE,
+  contactMessageInputSchema,
+  type ContactMessageInput,
+} from "./contact-message";
 import {
   deliverContactMessage,
   type ContactDeliveryDeps,
@@ -15,7 +19,14 @@ export async function handleContactMessage(
   if (data.website.trim()) {
     return { ok: true, contactId: data.request_id, emailId: null };
   }
-  return deliverContactMessage(data, await createDeps());
+  try {
+    return await deliverContactMessage(data, await createDeps());
+  } catch (error) {
+    if (error instanceof Error && error.message === CONTACT_UNAVAILABLE_MESSAGE) {
+      throw new Error(CONTACT_UNAVAILABLE_MESSAGE);
+    }
+    throw new Error("No se pudo enviar el mensaje");
+  }
 }
 
 export const sendContactMessage = createServerFn({ method: "POST" })
@@ -28,8 +39,8 @@ export const sendContactMessage = createServerFn({ method: "POST" })
         `[contact-message] phase=accepted request_id=${result.contactId} email_id=${result.emailId ?? "none"}`,
       );
       return result;
-    } catch {
+    } catch (error) {
       console.error(`[contact-message] phase=failed request_id=${data.request_id}`);
-      throw new Error("No se pudo enviar el mensaje");
+      throw error;
     }
   });

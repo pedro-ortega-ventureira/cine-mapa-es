@@ -1,6 +1,8 @@
 import {
   buildContactEmail,
+  CONTACT_UNAVAILABLE_MESSAGE,
   contactIdempotencyKey,
+  normalizeProfessionalContactEmail,
   normalizeContactInput,
   type ContactEmailConfig,
   type ContactEmailPayload,
@@ -18,6 +20,7 @@ export interface StoredContact extends ContactRecord {
 export interface ContactProfessional {
   id: string;
   fullName: string;
+  email: string | null;
   verified: boolean;
 }
 
@@ -80,11 +83,21 @@ export async function deliverContactMessage(
   if (!professional?.verified) {
     throw new Error("El profesional no está disponible para recibir contactos");
   }
+  const recipient = normalizeProfessionalContactEmail(professional.email);
+  if (!recipient) {
+    throw new Error(CONTACT_UNAVAILABLE_MESSAGE);
+  }
 
   const candidate: StoredContact = {
     ...toRecord(input),
     created_at: now.toISOString(),
-    email_payload: buildContactEmail(input, professional.fullName, deps.emailConfig, now),
+    email_payload: buildContactEmail(
+      input,
+      professional.fullName,
+      recipient,
+      deps.emailConfig,
+      now,
+    ),
     email_id: null,
   };
   const since = new Date(now.getTime() - 30 * 60 * 1_000);

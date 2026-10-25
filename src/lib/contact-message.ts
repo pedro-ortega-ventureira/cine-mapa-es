@@ -14,12 +14,44 @@ export const contactMessageInputSchema = z
 
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 
+export const CONTACT_UNAVAILABLE_MESSAGE = "Este profesional no puede recibir mensajes";
+const professionalContactEmailSchema = z.string().email().max(254);
+
+export function normalizeProfessionalContactEmail(value: string | null): string | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  const separator = normalized.indexOf("@");
+  if (separator <= 0 || separator !== normalized.lastIndexOf("@")) return null;
+
+  const localPart = normalized.slice(0, separator);
+  const unicodeDomain = normalized.slice(separator + 1);
+  if (!unicodeDomain) return null;
+
+  try {
+    const domainUrl = new URL(`http://${unicodeDomain}`);
+    if (
+      domainUrl.username ||
+      domainUrl.password ||
+      domainUrl.port ||
+      domainUrl.pathname !== "/" ||
+      domainUrl.search ||
+      domainUrl.hash
+    ) {
+      return null;
+    }
+    const candidate = `${localPart}@${domainUrl.hostname}`;
+    const parsed = professionalContactEmailSchema.safeParse(candidate);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface ContactEmailConfig {
-  to: string;
   from: string;
 }
 
 export interface ContactEmailPayload extends ContactEmailConfig {
+  to: string;
   replyTo: string;
   subject: string;
   text: string;
@@ -54,6 +86,7 @@ function escapeHtml(value: string): string {
 export function buildContactEmail(
   rawInput: ContactMessageInput,
   professionalName: string,
+  recipientEmail: string,
   config: ContactEmailConfig,
   submittedAt: Date,
 ): ContactEmailPayload {
@@ -84,7 +117,7 @@ export function buildContactEmail(
 
   return {
     from: config.from,
-    to: config.to,
+    to: recipientEmail,
     replyTo: input.sender_email,
     subject: `[Directorio] Contacto para ${safeProfessionalName}: ${safeSubject}`,
     text,
