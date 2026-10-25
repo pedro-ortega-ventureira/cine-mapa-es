@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetch-all";
 import { MapPin, ShieldCheck, HelpCircle } from "lucide-react";
+import { canonicalUrl } from "@/lib/seo";
 
 const ProfessionalsLeafletMap = lazy(() =>
   import("@/components/ProfessionalsLeafletMap").then((m) => ({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/mapa")({
         content:
           "Explora en el mapa a los profesionales del audiovisual que viven y trabajan en municipios rurales de España.",
       },
+      { rel: "canonical", href: canonicalUrl("/mapa") },
     ],
   }),
   component: MapPage,
