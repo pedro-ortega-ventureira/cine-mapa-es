@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ContactDialog } from "@/components/ContactDialog";
 import { colorForRole } from "@/lib/roles";
 import { publicHiringDetails } from "@/lib/public-profile";
+import { canonicalUrl } from "@/lib/seo";
 
 const MunicipalityContourMap = lazy(() =>
   import("@/components/MunicipalityContourMap").then((m) => ({
@@ -70,6 +71,7 @@ export const Route = createFileRoute("/profesionales/$slug")({
         { property: "og:description", content: p.bio?.slice(0, 160) ?? "" },
         ...(p.photo_url ? [{ property: "og:image", content: p.photo_url }] : []),
       ],
+      links: [{ rel: "canonical", href: canonicalUrl(`/profesionales/${p.slug}`) }],
     };
   },
   errorComponent: ({ error }) => (
