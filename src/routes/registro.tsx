@@ -41,6 +41,7 @@ import { FilmographyEditor } from "@/components/FilmographyEditor";
 
 export const Route = createFileRoute("/registro")({
   ssr: false,
+  head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" }] }),
   validateSearch: (search) => ({ mode: initialRegistrationAuthMode(search.mode) }),
   component: RegistroPage,
 });
