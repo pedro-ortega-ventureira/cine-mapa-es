@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { sendContactMessage } from "@/lib/contact-message.functions";
-import { CONTACT_UNAVAILABLE_MESSAGE } from "@/lib/contact-message";
 import { toast } from "sonner";
 
 const emptyForm = {
@@ -62,12 +61,8 @@ export function ContactDialog({
       setOpen(false);
       setForm(emptyForm);
       setRequestId(null);
-    } catch (error) {
-      toast.error(
-        error instanceof Error && error.message === CONTACT_UNAVAILABLE_MESSAGE
-          ? CONTACT_UNAVAILABLE_MESSAGE
-          : "No se pudo enviar el mensaje",
-      );
+    } catch {
+      toast.error("No se pudo enviar el mensaje");
     } finally {
       setLoading(false);
     }
@@ -86,6 +81,7 @@ export function ContactDialog({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <Input
+            aria-label="Tu nombre"
             required
             disabled={loading || retryLocked}
             placeholder="Tu nombre"
@@ -93,6 +89,7 @@ export function ContactDialog({
             onChange={(e) => setForm({ ...form, sender_name: e.target.value })}
           />
           <Input
+            aria-label="Tu email"
             required
             disabled={loading || retryLocked}
             type="email"
@@ -101,12 +98,14 @@ export function ContactDialog({
             onChange={(e) => setForm({ ...form, sender_email: e.target.value })}
           />
           <Input
+            aria-label="Asunto (opcional)"
             disabled={loading || retryLocked}
             placeholder="Asunto (opcional)"
             value={form.subject}
             onChange={(e) => setForm({ ...form, subject: e.target.value })}
           />
           <Textarea
+            aria-label="Mensaje"
             required
             disabled={loading || retryLocked}
             placeholder="Mensaje"
