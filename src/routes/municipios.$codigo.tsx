@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfessionalCard } from "@/components/ProfessionalCard";
 import { MapPin, Users } from "lucide-react";
+import { canonicalUrl } from "@/lib/seo";
 
 export const Route = createFileRoute("/municipios/$codigo")({
   loader: async ({ params }) => {
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/municipios/$codigo")({
           content: `Profesionales del audiovisual en ${m.name} (${m.province}, ${m.autonomous_community}). Población: ${m.population.toLocaleString("es-ES")} habitantes.`,
         },
       ],
+      links: [{ rel: "canonical", href: canonicalUrl(`/municipios/${m.code}`) }],
     };
   },
   notFoundComponent: () => (
