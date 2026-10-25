@@ -140,6 +140,7 @@ function Home() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  aria-label="Buscar profesionales"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Buscar por nombre, municipio o especialidad…"
@@ -180,8 +181,9 @@ function Home() {
       <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Mapa de municipios</h2>
-          <label className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
+          <label htmlFor="only-with-professionals" className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
             <input
+              id="only-with-professionals"
               type="checkbox"
               checked={onlyWithPros}
               onChange={(e) => setOnlyWithPros(e.target.checked)}
