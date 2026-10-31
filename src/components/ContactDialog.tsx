@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { sendContactMessage } from "@/lib/contact-message.functions";
+import { CONTACT_UNAVAILABLE_MESSAGE } from "@/lib/contact-message";
 import { toast } from "sonner";
 
 const emptyForm = {
@@ -61,8 +62,12 @@ export function ContactDialog({
       setOpen(false);
       setForm(emptyForm);
       setRequestId(null);
-    } catch {
-      toast.error("No se pudo enviar el mensaje");
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message === CONTACT_UNAVAILABLE_MESSAGE
+          ? CONTACT_UNAVAILABLE_MESSAGE
+          : "No se pudo enviar el mensaje",
+      );
     } finally {
       setLoading(false);
     }
